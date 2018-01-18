@@ -168,4 +168,4 @@ For any other mentioning please include my affiliation (ACTLab at University of 
   * Parameters are statically generated. There are hacks to add parameters at runtime, however those might not work with future versions of dynamic_reconfigure.
   * Groups not fully supported (https://github.com/ros-visualization/rqt_common_plugins/issues/162; This seems to be closed now, however the Indigo binary packages did not pick up the fixes yet).
 
-
+sjtu
