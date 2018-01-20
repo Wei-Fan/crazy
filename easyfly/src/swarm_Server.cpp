@@ -17,7 +17,6 @@
 #include "Eigen/Eigen/Eigen"
 #include "sensor_msgs/Imu.h"
 #include "Eigen/Eigen/Geometry"
-//#include "CrazyflieROS.cpp"
 #include <crazyflie_cpp/Crazyflie.h>
 
 using namespace Eigen;
@@ -28,7 +27,6 @@ const float K_Pm = 0.3f;
 const float K_Im = 0.1f;*/
 
 //constexpr double pi() { return std::atan(1)*4; }
-
 
 
 class CrazyflieROS //: private Attitude_estimator 
@@ -75,43 +73,38 @@ public:
 
     //m_serviceEmergency = n.advertiseService(tf_prefix + "/emergency", &CrazyflieROS::emergency, this);
     //m_serviceUpdateParams = n.advertiseService(tf_prefix + "/update_params", &CrazyflieROS::updateParams, this);
-    /*for (int i=0;i<2;++i)
-    {*/
-    //printf("Server index: %d\n",m_group_index );
-    	sprintf(msg_name,"/vehicle%d/output",m_group_index);
-    	m_outputsub = nh.subscribe<easyfly::output>(msg_name,10,&CrazyflieROS::outputCallback, this);
-    /*if (m_enable_logging_att) 
-    {*/
+
+    sprintf(msg_name,"/vehicle%d/output",m_group_index);
+    m_outputsub = nh.subscribe<easyfly::output>(msg_name,10,&CrazyflieROS::outputCallback, this);
+
+    if (m_enable_logging_att) {
     	sprintf(msg_name,"/vehicle%d/att_est",m_group_index);
-      	m_attpub = n.advertise<easyfly::att_est>(msg_name, 10);
-    //}
-    /*if (m_enable_logging_imu) 
-    {*/
+      m_attpub = n.advertise<easyfly::att_est>(msg_name, 10);
+    }
+    if (m_enable_logging_imu) {
       sprintf(msg_name,"/vehicle%d/tf_prefix/Imu",m_group_index);
       m_pubImu = n.advertise<sensor_msgs::Imu>(msg_name, 10);
-    //}
+    }
     sprintf(msg_name,"/vehicle%d/rssi",m_group_index);
     m_pubRssi = n.advertise<std_msgs::Float32>(msg_name, 10);
-    //}
-    
 
     for (auto& logBlock : m_logBlocks)
     {
       m_pubLogDataGeneric.push_back(n.advertise<easyfly::GenericLogData>(tf_prefix + "/" + logBlock.topic_name, 10));
     }
+    msg_att_est.uri = m_uri;
+    msg_att_est.group_index = m_group_index;
+
+    msg_att_est.att_est.x = m_roll_trim;
+    msg_att_est.att_est.y = m_pitch_trim;
+    msg_att_est.att_est.z = 0.0f;
     
-    ResetAtt();
-    std::thread t(&CrazyflieROS::run,this);
+    std::thread t(&CrazyflieROS::run, this);
     t.detach();
-    /*std::thread tt(&CrazyflieROS::onAttitude, this, std::placeholders::_1,std::placeholders::_2);
-    tt.detach();*/
   }
-  ~CrazyflieROS()
-  {
-  	printf("CrazyflieROS# %d Dead!!\n",m_group_index );
-  }
+
 private:
-  
+
   Vector3f acc_IMU;
   struct logStablizer {
     float roll;
@@ -156,15 +149,7 @@ private:
       ros::param::get(ros_param, value);
       m_cf.setParam<T>(id, (T)value);
   }
-  void ResetAtt()
-  {
-  	msg_att_est.uri = m_uri;
-    msg_att_est.group_index = m_group_index;
 
-    msg_att_est.att_est.x = m_roll_trim;
-    msg_att_est.att_est.y = m_pitch_trim;
-    msg_att_est.att_est.z = 0.0f;
-  }
   bool updateParams(
     easyfly::UpdateParams::Request& req,
     easyfly::UpdateParams::Response& res)
@@ -212,11 +197,10 @@ private:
 
   void run()
   {
-  	printf("Server # %d\n",m_group_index);
     // m_cf.reboot();
-    //m_mutex.lock();
     m_cf.logReset();
-    //printf("Server_id %d\n",m_cf.m_devId );
+    std::thread::id this_id = std::this_thread::get_id();
+    printf("thread number ########%s is running\n",this_id);
     float frequency = 50;
     std::function<void(float)> cb_lq = std::bind(&CrazyflieROS::onLinkQuality, this, std::placeholders::_1);
     m_cf.setLinkQualityCallback(cb_lq);
@@ -255,46 +239,43 @@ private:
       }
     }
 
-    
+    std::unique_ptr<LogBlock<logStablizer> > logblockStablizer;
+    std::unique_ptr<LogBlock<logImu> > logBlockImu;
     
     if (m_enableLogging) {
 
-      	std::unique_ptr<LogBlock<logStablizer> > logblockStablizer;
-  	  	std::unique_ptr<LogBlock<logImu> > logBlockImu;
-	
-      	std::function<void(const crtpPlatformRSSIAck*)> cb_ack = std::bind(&CrazyflieROS::onEmptyAck, this, std::placeholders::_1);
-      	m_cf.setEmptyAckCallback(cb_ack);
-	
-      	ROS_INFO("Requesting Logging variables...");
-      	m_cf.requestLogToc();
-	
-      	if(m_enable_logging_att){
-      	  std::function<void(uint32_t, logStablizer*)> cb_stab = std::bind(&CrazyflieROS::onAttitude, this, std::placeholders::_1,std::placeholders::_2);
-	
-      	  logblockStablizer.reset(new LogBlock<logStablizer>(
-      	    &m_cf,{
-      	      {"stabilizer", "roll"},
-      	      {"stabilizer", "pitch"},
-      	      {"stabilizer", "yaw"},
-      	      {"stabilizer", "thrust"},
-      	    }, cb_stab));
-      		
-      	  logblockStablizer->start(1); // 10ms
-      	}
-	
-      	if (m_enable_logging_imu) {
-      	  std::function<void(uint32_t, logImu*)> cb = std::bind(&CrazyflieROS::onImuData, this, std::placeholders::_1, std::placeholders::_2);
-	
-      	  logBlockImu.reset(new LogBlock<logImu>(
-      	    &m_cf,{
-      	      {"acc", "x"},
-      	      {"acc", "y"},
-      	      {"acc", "z"},
-      	      }, cb));
-      	  logBlockImu->start(1); // 10ms
-      	  //printf("%f\n", cb.acc_x);
-      	  
-      	}
+      std::function<void(const crtpPlatformRSSIAck*)> cb_ack = std::bind(&CrazyflieROS::onEmptyAck, this, std::placeholders::_1);
+      m_cf.setEmptyAckCallback(cb_ack);
+
+      ROS_INFO("Requesting Logging variables...");
+      m_cf.requestLogToc();
+
+      if(m_enable_logging_att){
+        std::function<void(uint32_t, logStablizer*)> cb_stab = std::bind(&CrazyflieROS::onAttitude, this, std::placeholders::_1,std::placeholders::_2);
+
+      logblockStablizer.reset(new LogBlock<logStablizer>(
+          &m_cf,{
+            {"stabilizer", "roll"},
+            {"stabilizer", "pitch"},
+            {"stabilizer", "yaw"},
+            {"stabilizer", "thrust"},
+          }, cb_stab));
+        logblockStablizer->start(1); // 10ms
+      }
+
+      if (m_enable_logging_imu) {
+        std::function<void(uint32_t, logImu*)> cb = std::bind(&CrazyflieROS::onImuData, this, std::placeholders::_1, std::placeholders::_2);
+
+        logBlockImu.reset(new LogBlock<logImu>(
+          &m_cf,{
+            {"acc", "x"},
+            {"acc", "y"},
+            {"acc", "z"},
+            }, cb));
+        logBlockImu->start(1); // 10ms
+        //printf("%f\n", cb.acc_x);
+        
+      }
       
     }
     ROS_INFO("Ready...");
@@ -320,7 +301,6 @@ private:
     for (int i = 0; i < 100; ++i) {
        m_cf.sendSetpoint(0, 0, 0, 0);
     }
-    //m_mutex.unlock();
   }
 
   void onImuData(uint32_t time_in_ms, logImu* data) {
@@ -356,8 +336,6 @@ private:
       msg_att_est.att_est.x = m_attest(0);
       msg_att_est.att_est.y = -m_attest(1);
       msg_att_est.att_est.z = m_attest(2);
-      printf("att est from %d vehicle!!\n",m_group_index );
-      //printf("att est from %s vehicle!!\n",m_uri.c_str() );
       m_attpub.publish(msg_att_est);
       //printf("Stabilizer Data!!:  %f    %f    %f \n",m_attest(0), -m_attest(1), m_attest(2));
   }
@@ -375,6 +353,7 @@ private:
         ROS_WARN("Link Quality low (%f)", linkQuality);
       }
   }
+
 
 private:
   Crazyflie m_cf;
@@ -405,19 +384,16 @@ private:
   easyfly::output m_output;
   easyfly::att_est msg_att_est;
   Vector3f m_attest;//, m_init_North;
-  std::vector<ros::Subscriber> m_outputpubs_v;
-  
-  std::mutex m_mutex;
+
 };
+static std::vector<std::string> crazyfly_uris;
+static std::vector<bool> crazyfly_bools;
+static int count;
 //.c_str()
-
-/*std::vector<Crazyflie*> m_EnsembleOfCfs;
-int m_CountCFs;*/
-
 bool add_crazyflie(
   easyfly::Swarm_Add::Request  &req,
   easyfly::Swarm_Add::Response &res)
-{	
+{
   	ROS_INFO("Adding %s as %s with trim(%f, %f). Logging: %d, Parameters: %d, Use ROS time: %d, group_index: %d, g_vehicle_num: %d",
     req.uri.c_str(),
     req.tf_prefix.c_str(),
@@ -429,6 +405,14 @@ bool add_crazyflie(
     req.group_index,
     req.g_vehicle_num);
 
+    crazyfly_bools.push_back(false);
+    crazyfly_uris.push_back(req.uri);
+
+    while(count != 0 && !crazyfly_bools[count-1])
+    {
+        ros::Duration(0.5).sleep();
+    }
+    printf("~~~~~~success~~~~~~~%s",req.uri);
   // Leak intentionally
     CrazyflieROS* cf = new CrazyflieROS(
     req.uri,
@@ -442,35 +426,23 @@ bool add_crazyflie(
     req.log_blocks,
     req.use_ros_time,
     req.enable_logging_att);
-    /*m_EnsembleOfCfs.push_back(&(cf->m_cf));
-    m_CountCFs++;
-    printf("m_CountCFs::%f\n",m_CountCFs );*/
+
+    crazyfly_bools[count] = true;
+    count++;
+
   	return true;
 }
-/*void CrazyflieROS::outputCallback(const easyfly::output::ConstPtr& msg,int i)
-{	
-		printf("outputGet!!!\n");
-		m_output.att_sp.x = msg->att_sp.x;
-		m_output.att_sp.y = msg->att_sp.y;
-		m_output.att_sp.z = msg->att_sp.z;
-		m_output.throttle = msg->throttle;
-        m_cf->sendSetpoint(
-          -m_output.att_sp.x * RAD2DEG,
-				  - m_output.att_sp.y * RAD2DEG,
-				  m_output.att_sp.z * RAD2DEG,
-				  m_output.throttle * 65000); 
-          m_sentSetpoint = true;
-	}*/
+
+
 int main(int argc, char **argv)
 {
-  
-  ros::init(argc, argv, "/vehicle");
+  ros::init(argc, argv, "/vehicle0");
   ros::NodeHandle n;
   char servicename[50];
+
   //use the absolute addresse for all cfs
   ros::ServiceServer service = n.advertiseService("/add_crazyflie", add_crazyflie);
-  ros::MultiThreadedSpinner spinner(2);
-  spinner.spin();
+  ros::spin();
 
   return 0;
 }

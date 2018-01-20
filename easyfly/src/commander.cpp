@@ -21,12 +21,18 @@
 #include "Eigen/Eigen/Eigen"
 #include "Eigen/Eigen/Geometry"
 #include "type_methode.h"
-#include "gl_declair.h"
+//#include "gl_declair.h"
+#include <opencv2/opencv.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+
 
 int g_vehicle_num=2;
 int g_joy_num=1;
 using namespace Eigen;
 using namespace std;
+using namespace cv;
 #define _USE_MATH_DEFINES //PI
 /*************YE Xin gl*/
 vector<float> x_init_pos;
@@ -35,6 +41,10 @@ vector<int> index_sequence;
 void give_index(int index)
 {
 	index_sequence.push_back(index);
+}
+void clear_index()
+{
+	index_sequence.clear();
 }
 /*************YE Xin gl*/
 class Commander
@@ -62,6 +72,10 @@ private:
 	float m_takeoff_switch_Hover;
 	float m_land_switch_idle;
 	bool isGotAtt, isGotPos, isFirstPos, isFirsrAtt, isFirstCircling;
+
+	//For sequence initialization
+	Mat src = Mat(Size(1000,1000), CV_8UC3, Scalar(0));
+
 	//MODE_RAW 0
 	//MODE_POS 1
 	//MODE_TRJ 2
@@ -149,10 +163,12 @@ public:
 			m_trjpub_v[i] = nh.advertise<easyfly::trj_ctrl_sp>(msg_name, 1);
 			sprintf(msg_name,"/vehicle%d/att_est",i);
 			m_estyawsub_v[i] = nh.subscribe<easyfly::att_est>(msg_name,5,boost::bind(&Commander::att_estCallback, this, _1, i));
+
+			m_viconMarkersub = nh.subscribe<vicon_bridge::Markers>("/vicon/markers",5,&Commander::vicon_markerCallback, this);
+
 			sprintf(msg_name,"/vehicle%d/pos_est", i); 
 			m_pos_est_v[i] = nh.advertise<easyfly::pos_est>(msg_name, 5);
 		}
-		m_viconMarkersub = nh.subscribe<vicon_bridge::Markers>("/vicon/markers",5,&Commander::vicon_markerCallback, this);
 		for(int i=0;i<g_joy_num;i++){
 			sprintf(msg_name,"/joygroup%d/joy",i);
 			m_joysub_v[i] = nh.subscribe<sensor_msgs::Joy>(msg_name,5,boost::bind(&Commander::joyCallback, this, _1, i));
@@ -251,7 +267,7 @@ public:
 						case TakingOff:{
 							//printf("%d  %d\n",isGotPos, isGotAtt);
 							
-							if(!isFirstVicon && isGotAtt){
+							if(isGotPos && isGotAtt){
 								for(int i=0;i<g_vehicle_num;i++){
 									command_takeoff(i,_dt_deriv);
 									//printf("pos sp commander: %f  %f  %f\n",m_ctrl_v[i].posctrl_msg.pos_sp.x,m_ctrl_v[i].posctrl_msg.pos_sp.y,m_ctrl_v[i].posctrl_msg.pos_sp.z );
@@ -395,6 +411,47 @@ public:
 		}
 	}
 
+	//For sequence intialization
+	void displayFunc()
+	{
+		namedWindow("vicon_test");	
+		Point p1 = Point(50,50);
+		Point p2 = Point(950,950);
+		rectangle(src, p1, p2, CV_RGB(0, 0, 255), -1);
+
+		for(int i=0;i<x_init_pos.size();i++){
+	    	circle(src, Point(x_init_pos[i]*1000, y_init_pos[i]*1000), 2, Scalar(0, 255, 0));  
+	    	printf("x%d: %f\n", i, x_init_pos[i]);
+	    	printf("y%d: %f\n", i, y_init_pos[i]);
+    	}	
+		imshow("vicon_test", src);
+	}
+
+	/*void configDone()
+	{
+
+	}*/
+
+	//For sequence intialization
+	static void onMouse(int event, int x, int y, int, void* userInput)
+	{
+		if (event != EVENT_LBUTTONDOWN) return;
+		Mat *img = (Mat*)userInput;
+		circle(*img, Point(x, y), 10, Scalar(0, 0, 255));
+		imshow("vicon_test", *img);
+
+		float nearest_dist=-1.0f;
+		int nearest_index=0;
+		for(int i=0;i<x_init_pos.size();i++){
+			float sq_dist=(x-x_init_pos[i]*1000)*(x-x_init_pos[i]*1000)+(y-y_init_pos[i]*1000)*(y-y_init_pos[i]*1000);
+			if(sq_dist<nearest_dist||nearest_dist<0){
+				nearest_dist=sq_dist;
+				nearest_index=i;
+			}
+		}
+		give_index(nearest_index);
+	}
+
 	void vicon_markerCallback(const vicon_bridge::Markers::ConstPtr& msg)
 	{	
 		m_markers = msg->markers;
@@ -405,28 +462,28 @@ public:
 			//printf("%d\n",msg->markers.size());
 			for (auto& Marker : m_markers)
     		{		
-    			//printf("hhhh");
+    			printf("hhhh");
     			Vector3f pos;
     			pos(0) = Marker.translation.x/1000.0f;
     			pos(1) = Marker.translation.y/1000.0f;
     			pos(2) = Marker.translation.z/1000.0f;
     			swarm_pos.push_back(pos);
 /*************YE Xin gl*/
-    			/*x_init_pos.push_back(pos(0));
+    			x_init_pos.push_back(pos(0));
 				y_init_pos.push_back(pos(1));
 				printf("x pos: %f\n", pos(0));
 		    	printf("y pos: %f\n", pos(1));
-		    	fflush(stdout);*/
+		    	fflush(stdout);
 			//	printf("\nx_command%d: %f\n", x_init_pos[]);
     		//	printf("y_command%d: %f\n", y_init_pos[i]);
 /*************YE Xin gl*/
     			//resetposController(&m_pos_est);
     		}
-    		/*for(int i=0;i<x_init_pos.size();i++){
+    		for(int i=0;i<x_init_pos.size();i++){
 		    	printf("x init%d: %f\n", i, x_init_pos[i]);
 		    	printf("y init%d: %f\n", i, y_init_pos[i]);
 		    	fflush(stdout);
-		    }*/
+		    }
     		if(swarm_pos.size()!=g_vehicle_num)
     		{
     			if(swarm_pos.size()>g_vehicle_num)
@@ -441,7 +498,7 @@ public:
    
     		}
     		else
-    		{	
+    		{
     			for (int i=0;i<swarm_pos.size();i++)
     			{
     				_takeoff_Pos.push_back(swarm_pos[i]);
@@ -454,11 +511,33 @@ public:
 				glutMouseFunc(MouseFunc);
 				glutDisplayFunc(&displayFunc);// 设置绘图函数  
 				glutMainLoop();*/
-
-				/*
-				if(index_sequence.size()==g_vehicle_num){
-
-				}*/
+				/*Sequence initialization*/
+				bool sequenceIsOk = false;
+				while(!sequenceIsOk)
+				{
+					displayFunc();
+					setMouseCallback("vicon_test", onMouse, &src);
+					waitKey();
+					destroyWindow("vicon_test");
+					//printf("%d\n", index_sequence.size());
+					/*check the click times and exit the initialization*/
+					if(index_sequence.size()==g_vehicle_num){
+						sequenceIsOk = true;
+					}else{
+						printf("Initialization fails!! Please click again!!\n");
+						clear_index();
+					}
+				}
+				for (int i = 0; i < index_sequence.size(); ++i)
+				{
+					//printf("%d\n", 100);
+					int tmp_index = index_sequence[i];
+					printf("%d", tmp_index);
+					Vector3f tmp;
+					tmp = swarm_pos[index_sequence[i]];
+					printf("%f %f\n", tmp(0), tmp(1));
+					fflush(stdout);
+				}
     		}
     		
     		
@@ -491,9 +570,8 @@ public:
 				m_pos_estmsg.pos_est.z = pos(2);
 				m_pos_estmsg.vehicle_index = i;
 /*************YE Xin gl*/
-				//m_pos_est_v[index_sequence[i]].publish(m_pos_estmsg);
+				m_pos_est_v[index_sequence[i]].publish(m_pos_estmsg);
 /*************YE Xin gl*/
-				m_pos_est_v[i].publish(m_pos_estmsg);
     		}	
     	}
     	
@@ -529,7 +607,6 @@ public:
 	}
 	void command_takeoff(int i, float dt)
 	{
-		//printf("hello,takeoff!!\n");
 		reset_takeoff = false;
 //		g_statusFlight = statusTakingoff;		
 		m_ctrl_v[i].posctrl_msg.pos_sp.x = _takeoff_Pos[i](0);
@@ -563,7 +640,7 @@ public:
 	    		}
 	    		else
 	    		{
-	    			//printf("hello,high speed!\n");
+	    			printf("hello,high speed!\n");
 	    			m_ctrl_v[i].posctrl_msg.pos_sp.z += takeoff_high_rate * dt;
 
 	    			m_ctrl_v[i].posctrl_msg.vel_ff.z = takeoff_high_rate;
@@ -575,7 +652,7 @@ public:
 	    		{
 	    			m_flight_state = Automatic;
 	    		}*/
-	    		//printf("%f \n", m_est_v[i].pos_est.z);
+	    		printf("%f \n", m_est_v[i].pos_est.z);
 	    		if(m_est_v[i].pos_est.z > takeoff_objective_height - m_takeoff_switch_Hover)// + m_takeoff_switch_Hover)
 	    		{
 	    			printf("HOVERING\n");

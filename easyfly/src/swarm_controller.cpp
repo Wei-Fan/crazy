@@ -118,8 +118,8 @@ public:
 		v_posctrl_output.setZero();
 		ros::NodeHandle nh("~");//~ means private param
 		nh.getParam("group_index", m_group_index);
-		
-		//sprintf(m_resFnameRoot,"/home/walt/catkin_ws/src/crazyflie_ros-first_trails/easyfly/resultat/vehicle%d/",m_group_index);
+
+		sprintf(m_resFnameRoot,"/home/walt/catkin_ws/src/crazyflie_ros-first_trails/easyfly/resultat/vehicle%d/",m_group_index);
 
 		/*char msg_name[50];
   		num_vehiclesub = nh.subscribe<crazyflie_driver::num_vehiclepub>("/num_vehiclepub",5,&Swarm_Controller::num_veh_Callback, this);*/
@@ -180,10 +180,6 @@ public:
 		ros::Timer timer = node.createTimer(ros::Duration(1.0/frequency), &Swarm_Controller::iteration, this);
 		ros::spin();	
 	}
-	~Swarm_Controller()
-	{
-		printf("Controller %d Dead!!!! \n",m_group_index );
-	}
 	void iteration(const ros::TimerEvent& e)
 	{					
 		
@@ -196,7 +192,6 @@ public:
 			m_output.att_sp.z = 0.0f;
 			m_output.throttle = 0.0f;
 			m_pubs.m_outputpub.publish(m_output);
-
 		}
 		else{			
 			switch(m_flight_mode){
@@ -210,15 +205,7 @@ public:
 				}//case MODE_RAW
 				break;
 				case MODE_POS:{
-					/*if(isFirstAttEst&& !isFirstposSp)
-					{
-						printf("Not receiving att estimation at %d vehicle!! \n",m_group_index);
-					}
-					if(isFirstAccIMU&& !isFirstposSp)
-					{
-						printf("Not receiving IMU estimation at %d vehicle!! \n",m_group_index);
-					}*/
-					if(m_cmd.flight_state!=Idle && !isFirstposSp && !isFirstPosEst && !isFirstAttEst){ //&& !isFirstAccIMU){ 
+					if(m_cmd.flight_state!=Idle && !isFirstposSp && !isFirstPosEst && !isFirstAccIMU && !isFirstAttEst){
 					//printf("%d    %d     %d     %d    %d!!\n",m_cmd.flight_state,isFirstposSp,isFirstPosEst,isFirstAccIMU,isFirstAttEst);
 					//if(!isFirstAccIMU && !isFirstAttEst){ //static test
 						control_nonLineaire(&m_recording, &m_pos_est, &m_sp_vecs.v_posctrl_posSp, &m_sp_vecs.v_posctrl_velFF, &m_sp_vecs.v_posctrl_acc_sp, &v_posctrl_output, &m_est_vecs.m_cfImuAcc, &m_est_vecs.m_att_est, dt);
@@ -232,7 +219,6 @@ public:
 						//printf("%f\n",m_sp_vecs.v_posctrl_acc_sp(0) );
 						//printf("output give:  %f     %f\n", v_posctrl_output(0),v_posctrl_output(1));
 						m_pubs.m_outputpub.publish(m_output);
-						printf("att Got from group index:%d  x: %f y: %f z:%f\n",m_group_index, m_output.att_sp.x,m_output.att_sp.y,m_output.att_sp.z);
 					}
 				//}//if flight_mode!=Idle
 			}//case MODE_POS
@@ -337,7 +323,7 @@ public:
 	void pos_estCallback(const easyfly::pos_est::ConstPtr& est)
 	{	
 		if(isFirstPosEst){
-			//m_group_index = est->vehicle_index;
+			m_group_index = est->vehicle_index;
 			isFirstPosEst = false;
 		}
 		m_pos_est(0) = est->pos_est.x;

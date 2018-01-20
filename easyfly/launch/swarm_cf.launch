@@ -2,7 +2,7 @@
 
 <launch>
   <!-- 0-raw, 1-pos, 2-trj -->
-  <param name="flight_mode" value="1" type="int" />
+  <param name="flight_mode" value="0" type="int" />
   <param name="joy_num" value="1" type="int" />
   <arg name="joy_dev0" default="/dev/input/js0" />
   <arg name="g_vehicle_num" default="2" />

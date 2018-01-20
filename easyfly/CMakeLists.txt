@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   vicon_bridge
   genmsg
+  cv_bridge
 )
 
 ################################################
@@ -81,7 +82,7 @@ include_directories(
  # /home/wade/catkin_ws/src/crazyflie_ros-first_trails/easyfly/include
 )
 
-add_library(gl_declair SHARED include/gl_declair.cpp)
+#add_library(gl_declair SHARED include/gl_declair.cpp)
 add_library(IIR SHARED include/IIR.cpp)
 add_library(type_methode SHARED include/type_methode.cpp)
 
@@ -90,12 +91,12 @@ add_executable(commander
 )
 
 target_link_libraries(commander
-  GLU GL glut
+  #GLU GL glut
   ${catkin_LIBRARIES}
   ${Boost_LIBRARIES}
  # /home/wade/catkin_ws/src/crazyflie_ros-first_trails/easyfly/include/type_methode.cpp
  # /home/wade/catkin_ws/src/crazyflie_ros-first_trails/easyfly/include/gl_declair.cpp
- gl_declair
+ #gl_declair
  type_methode
 )
 
@@ -134,7 +135,6 @@ target_link_libraries(swarm_controller
  type_methode
 )
 
-
 add_executable(joysticks2
   src/joysticks2.cpp
 )
@@ -142,8 +142,6 @@ target_link_libraries(joysticks2
   ${catkin_LIBRARIES}
   ${Boost_LIBRARIES}
 )
-
-
 
 #add_executable(xbee_linker
 #  src/xbee_linker.cpp
