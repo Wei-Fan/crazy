@@ -2,7 +2,7 @@
 
 <launch>
   <!-- 0-raw, 1-pos, 2-trj -->
-  <param name="flight_mode" value="0" type="int" />
+  <param name="flight_mode" value="1" type="int" />
   <param name="joy_num" value="1" type="int" />
   <arg name="joy_dev0" default="/dev/input/js0" />
   <arg name="g_vehicle_num" default="2" />
@@ -36,7 +36,7 @@
   </node>
 
   <group ns="vehicle0">
-      <arg name="uri" default="radio://0/0/250K/0xE7E7E7E7E7"/>
+      <arg name="uri" default="radio://0/80/250K/0xE7E7E7E7E7"/>
       <!--rosparam command="load" file="$(find easyfly)/config/pid_param.yaml"/-->
       <node pkg="easyfly" type="swarm_addCf" name="swarm_addCf0" output="screen">
           <param name="group_index" value="0"/>
@@ -53,7 +53,7 @@
 
 
   <group ns="vehicle1">
-      <arg name="uri" default="radio://0/80/250K/0xE7E7E7E7E7"/>
+      <arg name="uri" default="radio://0/0/250K/0xE8E8E8E8E8"/>
       <node pkg="easyfly" type="swarm_addCf" name="swarm_addCf1" output="screen">
         <param name="uri" value="$(arg uri)" type="string" />
         <param name="group_index" value="1"/>

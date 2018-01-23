@@ -1,0 +1,6 @@
+1 swarm_cf.launch: each parameters of radio://0/0/250k/0xE7E7E7E7E7 represents what?(ok)
+2 Which variable contains the information about the addresses of wireless divices on crazyflie?(ok)
+3 It seems like the second crazyfly begin to initialize and occupy the resource. If this is true, how to use thread lock to solve the problem? To solve this, I am afraid that we need to understand how ros servicew work.(ok)
+-new CrazyflieROS ensure variables cannot be changed between two threads.
+-threads are not occupied each other.
+4 what is the logreset?

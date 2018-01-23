@@ -38,6 +38,7 @@ using namespace cv;
 vector<float> x_init_pos;
 vector<float> y_init_pos;
 vector<int> index_sequence;
+float amp_coeff;
 void give_index(int index)
 {
 	index_sequence.push_back(index);
@@ -414,13 +415,23 @@ public:
 	//For sequence intialization
 	void displayFunc()
 	{
+		float tmp_max = 0;
+		for (int i = 0; i < x_init_pos.size(); ++i)
+		{
+			float tmp = sqrt(x_init_pos[i]*x_init_pos[i]+y_init_pos[i]*y_init_pos[i]);
+			if (tmp_max < tmp)
+				tmp_max = tmp;	
+		}
+		amp_coeff = 400.0f/tmp_max;
+		//printf("tmp_max : %f***********amp_coeff : %f\n", tmp_max, amp_coeff);
+
 		namedWindow("vicon_test");	
 		Point p1 = Point(50,50);
 		Point p2 = Point(950,950);
 		rectangle(src, p1, p2, CV_RGB(0, 0, 255), -1);
 
 		for(int i=0;i<x_init_pos.size();i++){
-	    	circle(src, Point(x_init_pos[i]*1000, y_init_pos[i]*1000), 2, Scalar(0, 255, 0));  
+			circle(src, Point(500-y_init_pos[i]*amp_coeff, 500+x_init_pos[i]*amp_coeff), 2, Scalar(0, 255, 0));  
 	    	printf("x%d: %f\n", i, x_init_pos[i]);
 	    	printf("y%d: %f\n", i, y_init_pos[i]);
     	}	
@@ -443,7 +454,7 @@ public:
 		float nearest_dist=-1.0f;
 		int nearest_index=0;
 		for(int i=0;i<x_init_pos.size();i++){
-			float sq_dist=(x-x_init_pos[i]*1000)*(x-x_init_pos[i]*1000)+(y-y_init_pos[i]*1000)*(y-y_init_pos[i]*1000);
+			float sq_dist=(y-x_init_pos[i]*amp_coeff-500)*(y-x_init_pos[i]*amp_coeff-500)+(x+y_init_pos[i]*amp_coeff-500)*(x+y_init_pos[i]*amp_coeff-500);
 			if(sq_dist<nearest_dist||nearest_dist<0){
 				nearest_dist=sq_dist;
 				nearest_index=i;
@@ -458,7 +469,7 @@ public:
 		
 		if(isFirstVicon && msg->markers.size()==g_vehicle_num)
 		{	
-			printf("received vicon_bridge\n");
+			printf("****************received vicon_bridge, number: %d\n", msg->markers.size());
 			//printf("%d\n",msg->markers.size());
 			for (auto& Marker : m_markers)
     		{		
@@ -544,6 +555,7 @@ public:
 		}
 		if(!isFirstVicon && msg->markers.size()==g_vehicle_num)
 		{
+			//printf("***************vicon !\n");
 			for (auto& Marker : m_markers)
     		{	
     			Vector3f pos;
@@ -570,6 +582,7 @@ public:
 				m_pos_estmsg.pos_est.z = pos(2);
 				m_pos_estmsg.vehicle_index = i;
 /*************YE Xin gl*/
+				//printf("************index : %d********pos : %f\n", index_sequence[i], pos(0));
 				m_pos_est_v[index_sequence[i]].publish(m_pos_estmsg);
 /*************YE Xin gl*/
     		}	

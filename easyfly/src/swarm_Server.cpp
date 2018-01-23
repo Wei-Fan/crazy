@@ -99,6 +99,7 @@ public:
     msg_att_est.att_est.y = m_pitch_trim;
     msg_att_est.att_est.z = 0.0f;
     
+    //test = true;
     std::thread t(&CrazyflieROS::run, this);
     t.detach();
   }
@@ -195,12 +196,27 @@ private:
     return true;
   }
 
+  /*void run_test()
+  {
+    //test = !test;
+    int count_test = 0;
+    std::thread::id this_id = std::this_thread::get_id();
+    while(count_test < 100&&ros::ok())//&&!test)
+    {
+      count_test++;
+      printf("thread number *****%d : %d\n",this_id, count_test);
+      ros::Duration(0.5).sleep();
+    }
+  }*/
+
   void run()
   {
+    //printf("************start run\n");
     // m_cf.reboot();
     m_cf.logReset();
     std::thread::id this_id = std::this_thread::get_id();
-    printf("thread number ########%s is running\n",this_id);
+    printf("thread number ########%d is running\n",this_id);
+    fflush(stdout);
     float frequency = 50;
     std::function<void(float)> cb_lq = std::bind(&CrazyflieROS::onLinkQuality, this, std::placeholders::_1);
     m_cf.setLinkQualityCallback(cb_lq);
@@ -337,7 +353,7 @@ private:
       msg_att_est.att_est.y = -m_attest(1);
       msg_att_est.att_est.z = m_attest(2);
       m_attpub.publish(msg_att_est);
-      //printf("Stabilizer Data!!:  %f    %f    %f \n",m_attest(0), -m_attest(1), m_attest(2));
+      //printf("Data from ###%s:  %f    %f    %f \n",m_uri.c_str(), m_attest(0), -m_attest(1), m_attest(2));
   }
 
   
@@ -349,8 +365,9 @@ private:
   }
 
   void onLinkQuality(float linkQuality) {
+      std::thread::id this_id = std::this_thread::get_id();
       if (linkQuality < 0.7) {
-        ROS_WARN("Link Quality low (%f)", linkQuality);
+        ROS_WARN("Link Quality low (%f) for thread*****%d", linkQuality, this_id);
       }
   }
 
@@ -384,11 +401,12 @@ private:
   easyfly::output m_output;
   easyfly::att_est msg_att_est;
   Vector3f m_attest;//, m_init_North;
+  //bool test;
 
 };
-static std::vector<std::string> crazyfly_uris;
-static std::vector<bool> crazyfly_bools;
-static int count;
+//static std::vector<std::string> crazyfly_uris;
+//static std::vector<bool> crazyfly_bools;
+//static int count;
 //.c_str()
 bool add_crazyflie(
   easyfly::Swarm_Add::Request  &req,
@@ -405,14 +423,19 @@ bool add_crazyflie(
     req.group_index,
     req.g_vehicle_num);
 
-    crazyfly_bools.push_back(false);
+    /*crazyfly_bools.push_back(false);
     crazyfly_uris.push_back(req.uri);
 
     while(count != 0 && !crazyfly_bools[count-1])
     {
         ros::Duration(0.5).sleep();
     }
-    printf("~~~~~~success~~~~~~~%s",req.uri);
+    printf("~~~~~~success~~~~~~~%s\n",req.uri.c_str());*/
+    if (req.group_index != 0)
+    {
+      ros::Duration(2.0).sleep();
+    }
+
   // Leak intentionally
     CrazyflieROS* cf = new CrazyflieROS(
     req.uri,
@@ -427,8 +450,8 @@ bool add_crazyflie(
     req.use_ros_time,
     req.enable_logging_att);
 
-    crazyfly_bools[count] = true;
-    count++;
+    //crazyfly_bools[count] = true;
+    //count++;
 
   	return true;
 }

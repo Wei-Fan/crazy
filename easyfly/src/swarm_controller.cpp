@@ -205,7 +205,7 @@ public:
 				}//case MODE_RAW
 				break;
 				case MODE_POS:{
-					if(m_cmd.flight_state!=Idle && !isFirstposSp && !isFirstPosEst && !isFirstAccIMU && !isFirstAttEst){
+					if(m_cmd.flight_state!=Idle && !isFirstposSp && !isFirstPosEst){// && !isFirstAccIMU && !isFirstAttEst){
 					//printf("%d    %d     %d     %d    %d!!\n",m_cmd.flight_state,isFirstposSp,isFirstPosEst,isFirstAccIMU,isFirstAttEst);
 					//if(!isFirstAccIMU && !isFirstAttEst){ //static test
 						control_nonLineaire(&m_recording, &m_pos_est, &m_sp_vecs.v_posctrl_posSp, &m_sp_vecs.v_posctrl_velFF, &m_sp_vecs.v_posctrl_acc_sp, &v_posctrl_output, &m_est_vecs.m_cfImuAcc, &m_est_vecs.m_att_est, dt);
