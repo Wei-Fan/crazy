@@ -24,7 +24,7 @@ void rotation2quaternion(const Matrix3f* R, Vector4f* Q);
 
 void euler2quaternion(const Vector3f* Euler, Vector4f* Q);
 
-void vec3f_norm(const Vector3f* a, float anwser);
+void vec3f_norm(const Vector3f* a, float* anwser);
 
 //void quaternion_derivative(const Vector4f* Q, Vector4f* derQ, const Vector3f* w);
 

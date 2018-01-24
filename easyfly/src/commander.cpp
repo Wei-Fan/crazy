@@ -268,7 +268,7 @@ public:
 						case TakingOff:{
 							//printf("%d  %d\n",isGotPos, isGotAtt);
 							
-							if(isGotPos && isGotAtt){
+							if(!isFirstVicon && isGotAtt){
 								for(int i=0;i<g_vehicle_num;i++){
 									command_takeoff(i,_dt_deriv);
 									//printf("pos sp commander: %f  %f  %f\n",m_ctrl_v[i].posctrl_msg.pos_sp.x,m_ctrl_v[i].posctrl_msg.pos_sp.y,m_ctrl_v[i].posctrl_msg.pos_sp.z );
@@ -567,7 +567,7 @@ public:
     			{
     				Vector3f v_difference = pos-swarm_pos[i];
     				float norm;
-    				vec3f_norm(&v_difference, norm);
+    				vec3f_norm(&v_difference, &norm);
     				if(  norm < MAX_VELOCITY*MAX_VELOCITY*0.02*0.02) //max circle
     				{
     					swarm_pos[i] = pos;

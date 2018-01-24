@@ -32,9 +32,9 @@ void vec3f_normalize(Vector3f* v)
 	(*v)(2) /= inv_norm;
 	}
 }
-void vec3f_norm(const Vector3f* a, float anwser)
+void vec3f_norm(const Vector3f* a, float* anwser)
 {
-	anwser = sqrtf((*a)(0)*(*a)(0) + (*a)(1)*(*a)(1) + (*a)(2)*(*a)(2));
+	*anwser = sqrtf((*a)(0)*(*a)(0) + (*a)(1)*(*a)(1) + (*a)(2)*(*a)(2));
 }
 void vec3f_cross(const Vector3f* a, const Vector3f* b, Vector3f* d)
 {
