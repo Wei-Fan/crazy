@@ -37,8 +37,11 @@ using namespace cv;
 /*************YE Xin gl*/
 vector<float> x_init_pos;
 vector<float> y_init_pos;
+vector<float> x_marker_init;
+vector<float> y_marker_init;
 vector<int> index_sequence;
 float amp_coeff;
+float about_edge = 0.5;
 void give_index(int index)
 {
 	index_sequence.push_back(index);
@@ -102,10 +105,16 @@ private:
 	std::vector<easyfly::pos_est> m_est_v;
 	std::vector<Vector3f> m_att_est_v;
 	std::vector<Vector3f> swarm_pos;
+	std::vector<Vector3f> swarm_pos_predict;//records prediction based on last time position, error, and velocity
+	std::vector<Vector3f> swarm_pos_err;//records position error for correction
+	std::vector<Vector3f> swarm_pos_step;//records step(only velocity) from last two positions.
+	std::vector<Vector3f> m_swarm_pos;//the modifiable version of swarm_pos
 	easyfly::commands m_cmd_msg;
 	std::vector<Vector3f> _takeoff_Pos;
 	Vector3f m_vel_ff, m_acc_sp,  m_last_rateSp;
 	easyfly::pos_est m_pos_estmsg;
+
+	float z_ground;
 
 public:
 	Commander(ros::NodeHandle& nh)
@@ -422,13 +431,21 @@ public:
 			if (tmp_max < tmp)
 				tmp_max = tmp;	
 		}
-		amp_coeff = 400.0f/tmp_max;
-		//printf("tmp_max : %f***********amp_coeff : %f\n", tmp_max, amp_coeff);
+		amp_coeff = 400.0f/tmp_max;                        
+		printf("tmp_max : %f***********amp_coeff : %f\n", tmp_max, amp_coeff);   
 
 		namedWindow("vicon_test");	
 		Point p1 = Point(50,50);
 		Point p2 = Point(950,950);
 		rectangle(src, p1, p2, CV_RGB(0, 0, 255), -1);
+
+
+		for(int i=0;i<x_marker_init.size();i++){
+			circle(src, Point(500-y_marker_init[i]*amp_coeff, 500+x_marker_init[i]*amp_coeff), 2, Scalar(0, 255, 0));  
+	    	printf("x1 %d: %f\n", i, x_marker_init[i]);
+	    	printf("y1 %d: %f\n", i, y_marker_init[i]);
+    	}
+
 
 		for(int i=0;i<x_init_pos.size();i++){
 			circle(src, Point(500-y_init_pos[i]*amp_coeff, 500+x_init_pos[i]*amp_coeff), 2, Scalar(0, 255, 0));  
@@ -463,131 +480,343 @@ public:
 		give_index(nearest_index);
 	}
 
+		void unite()
+	{
+		vector<bool> all_union(x_marker_init.size(),0);
+		for(int i=0;i<x_marker_init.size();++i)
+		{
+		    int within_circle = 0;
+			for(int j=1;j<x_marker_init.size();++j)
+			{
+				if(sqrt((x_marker_init[i]-x_marker_init[j])*(x_marker_init[i]-x_marker_init[j])+(y_marker_init[i]-y_marker_init[j])*(y_marker_init[i]-y_marker_init[j]))<about_edge)
+					++within_circle;
+			}
+			if(within_circle<3)
+				all_union[i]=1;
+		}
+		for(int i=0;i<x_marker_init.size();++i)
+		{
+			if(all_union[i])continue;
+			all_union[i]=1;
+			vector<int> num_of_point(3,-1);
+			vector<float> min_dstc(2,-1);
+		    float temp_dstc;
+		    for(int j=1;j<x_marker_init.size();++j)
+		    {
+		    	if(all_union[j])continue;
+		    	temp_dstc=(x_marker_init[i]-x_marker_init[j])*(x_marker_init[i]-x_marker_init[j])+(y_marker_init[i]-y_marker_init[j])*(y_marker_init[i]-y_marker_init[j]);
+		    	if(min_dstc[0]>temp_dstc||min_dstc[0]<0)
+		    	{
+		    		num_of_point[0]=j;
+		    		min_dstc[0]=temp_dstc;
+		    	}
+		    }
+		    all_union[num_of_point[0]]=1;
+		    for(int j=1;j<x_marker_init.size();++j)
+		    {
+		    	if(all_union[j])continue;
+		    	temp_dstc=(x_marker_init[i]-x_marker_init[j])*(x_marker_init[i]-x_marker_init[j])+(y_marker_init[i]-y_marker_init[j])*(y_marker_init[i]-y_marker_init[j]);
+		    	if(min_dstc[1]>temp_dstc||min_dstc[1]<0)
+		    	{
+		    		num_of_point[1]=j;
+		    		min_dstc[1]=temp_dstc;
+		    	}
+		    }
+		    all_union[num_of_point[1]]=1;
+		    temp_dstc=x_marker_init[num_of_point[0]]+x_marker_init[num_of_point[1]];
+		    x_init_pos.push_back(temp_dstc/2);
+		    temp_dstc=y_marker_init[num_of_point[0]]+y_marker_init[num_of_point[1]];
+		    y_init_pos.push_back(temp_dstc/2);
+
+		    float temp_cross_product=-9999;
+		    for(int j=1;j<x_marker_init.size();++j)
+		    {
+		    	if(all_union[j])continue;
+		    	float cross_product;
+		    	cross_product=(x_marker_init[num_of_point[0]]-x_marker_init[j])*(x_marker_init[num_of_point[1]]-x_marker_init[j])+(y_marker_init[num_of_point[0]]-y_marker_init[j])*(y_marker_init[num_of_point[1]]-y_marker_init[j]);
+		    	if(cross_product<temp_cross_product||temp_cross_product<0)
+		    	{
+		    		num_of_point[2]=j;
+		    		temp_cross_product=cross_product;
+		    	}
+		    }
+		    all_union[num_of_point[2]]=1;
+		}
+	}
+
 	void vicon_markerCallback(const vicon_bridge::Markers::ConstPtr& msg)
 	{	
 		m_markers = msg->markers;
 		
-		if(isFirstVicon && msg->markers.size()==g_vehicle_num)
+		if(isFirstVicon && msg->markers.size() != 0)
 		{	
-			printf("****************received vicon_bridge, number: %d\n", msg->markers.size());
-			//printf("%d\n",msg->markers.size());
 			for (auto& Marker : m_markers)
     		{		
-    			printf("hhhh");
+    			//printf("hhhh");
     			Vector3f pos;
     			pos(0) = Marker.translation.x/1000.0f;
     			pos(1) = Marker.translation.y/1000.0f;
     			pos(2) = Marker.translation.z/1000.0f;
-    			swarm_pos.push_back(pos);
-/*************YE Xin gl*/
-    			x_init_pos.push_back(pos(0));
-				y_init_pos.push_back(pos(1));
-				printf("x pos: %f\n", pos(0));
-		    	printf("y pos: %f\n", pos(1));
-		    	fflush(stdout);
-			//	printf("\nx_command%d: %f\n", x_init_pos[]);
-    		//	printf("y_command%d: %f\n", y_init_pos[i]);
-/*************YE Xin gl*/
-    			//resetposController(&m_pos_est);
-    		}
-    		for(int i=0;i<x_init_pos.size();i++){
-		    	printf("x init%d: %f\n", i, x_init_pos[i]);
-		    	printf("y init%d: %f\n", i, y_init_pos[i]);
-		    	fflush(stdout);
-		    }
-    		if(swarm_pos.size()!=g_vehicle_num)
-    		{
-    			if(swarm_pos.size()>g_vehicle_num)
-    			{
-    				printf("More vehicles than actually have!! Warning!!\n");
-    			}
 
-    			else if(swarm_pos.size()<g_vehicle_num)
-    			{
-    				printf("Less vehicles than actually have!! Warning!!\n");
-    			}
-   
-    		}
-    		else
-    		{
-    			for (int i=0;i<swarm_pos.size();i++)
-    			{
-    				_takeoff_Pos.push_back(swarm_pos[i]);
-    			}
+    			x_marker_init.push_back(pos(0));
+				y_marker_init.push_back(pos(1));
+				z_ground = 0.02;
+			}
+    			
+    		unite();//identify crazyflies and get their position into swarm_pos
+
+			bool sequenceIsOk = false;
+			while(!sequenceIsOk)//use mouse to rearrange index of swarm_pos
+			{
+				displayFunc();
+				setMouseCallback("vicon_test", onMouse, &src);
+				waitKey();
+				destroyWindow("vicon_test");
+				//printf("%d\n", index_sequence.size());
+				/*check the click times and exit the initialization*/
+				if(index_sequence.size()==g_vehicle_num){
+					sequenceIsOk = true;
+				}else{
+					printf("Initialization fails!! Please click again!!\n");
+					clear_index();
+				}
+			}
+			
+			//printf("%d*****%d\n", index_sequence.size(), index_sequence[0]);
+
+			for (int i=0; i<index_sequence.size();i++)
+			{
+				Vector3f tmp_pos;
+				tmp_pos(0) = x_init_pos[index_sequence[i]];
+				tmp_pos(1) = y_init_pos[index_sequence[i]];
+				tmp_pos(2) = z_ground;
+				swarm_pos.push_back(tmp_pos);
+				m_swarm_pos.push_back(tmp_pos);
+				_takeoff_Pos.push_back(tmp_pos);
+
+	    		Vector3f tmp_zero;
+	    		tmp_zero(0) = tmp_zero(1) = tmp_zero(2) = 0;
+	    		swarm_pos_step.push_back(tmp_zero);
+	    		swarm_pos_predict.push_back(tmp_zero);
+	    		swarm_pos_err.push_back(tmp_zero); 
+			}
+			/*for (int i = 0; i < index_sequence.size(); ++i)//print index_sequence
+			{
+				//printf("%d\n", 100);
+				int tmp_index = index_sequence[i];
+				printf("%d", tmp_index);
+				Vector3f tmp;
+				tmp = swarm_pos[index_sequence[i]];
+				printf("%f %f\n", tmp(0), tmp(1));
+				fflush(stdout);
+			}*/
+
+    		if(swarm_pos.size()==g_vehicle_num)
     			isFirstVicon = false;
-    			/*glutInitDisplayMode(GLUT_RGB | GLUT_SINGLE);// 设置显示模式(RGB颜色|单缓冲，对应的还有索引颜色和双缓冲)  
-    			glutInitWindowPosition(100, 100);// 设置窗口的默认显示位置  
-    			glutInitWindowSize(400, 400);// 设置窗口的大小  
-    			glutCreateWindow("Crazyflie Identifier");// 设置窗口的标题  
-				glutMouseFunc(MouseFunc);
-				glutDisplayFunc(&displayFunc);// 设置绘图函数  
-				glutMainLoop();*/
-				/*Sequence initialization*/
-				bool sequenceIsOk = false;
-				while(!sequenceIsOk)
-				{
-					displayFunc();
-					setMouseCallback("vicon_test", onMouse, &src);
-					waitKey();
-					destroyWindow("vicon_test");
-					//printf("%d\n", index_sequence.size());
-					/*check the click times and exit the initialization*/
-					if(index_sequence.size()==g_vehicle_num){
-						sequenceIsOk = true;
-					}else{
-						printf("Initialization fails!! Please click again!!\n");
-						clear_index();
-					}
-				}
-				for (int i = 0; i < index_sequence.size(); ++i)
-				{
-					//printf("%d\n", 100);
-					int tmp_index = index_sequence[i];
-					printf("%d", tmp_index);
-					Vector3f tmp;
-					tmp = swarm_pos[index_sequence[i]];
-					printf("%f %f\n", tmp(0), tmp(1));
-					fflush(stdout);
-				}
-    		}
-    		
-    		
-		}
-		if(!isFirstVicon && msg->markers.size()==g_vehicle_num)
-		{
-			//printf("***************vicon !\n");
-			for (auto& Marker : m_markers)
-    		{	
-    			Vector3f pos;
-    			pos(0) = Marker.translation.x/1000.0f;
-    			pos(1) = Marker.translation.y/1000.0f;
-    			pos(2) = Marker.translation.z/1000.0f;
-    			//printf("%f   %f   %f\n", pos(0),pos(1),pos(2));
-    			for (int i=0;i<g_vehicle_num;i++)
-    			{
-    				Vector3f v_difference = pos-swarm_pos[i];
-    				float norm;
-    				vec3f_norm(&v_difference, &norm);
-    				if(  norm < MAX_VELOCITY*MAX_VELOCITY*0.02*0.02) //max circle
-    				{
-    					swarm_pos[i] = pos;
-    				}
-    			}
-    		}
-    		for (int i=0;i<g_vehicle_num;i++)
-    		{
-    			Vector3f pos = swarm_pos[i];
-    			m_pos_estmsg.pos_est.x = pos(0);
-				m_pos_estmsg.pos_est.y = pos(1);
-				m_pos_estmsg.pos_est.z = pos(2);
-				m_pos_estmsg.vehicle_index = i;
-/*************YE Xin gl*/
-				//printf("************index : %d********pos : %f\n", index_sequence[i], pos(0));
-				m_pos_est_v[index_sequence[i]].publish(m_pos_estmsg);
-/*************YE Xin gl*/
-    		}	
     	}
-    	
+		else if(!isFirstVicon && msg->markers.size() != 0)
+		{
+			std::vector<Vector3f> consider_pos;//markers_pos;
+			for (auto& Marker : m_markers)
+	    	{	
+	    		Vector3f pos;
+	    		pos(0) = Marker.translation.x/1000.0f;
+	    		pos(1) = Marker.translation.y/1000.0f;
+	    		pos(2) = Marker.translation.z/1000.0f;
+	    		consider_pos.push_back(pos);
+	    	}
+
+			/*grand wipe out*/
+			/*std::vector<Vector3f> consider_pos;
+			for (int i=0;i<markers_pos.size();i++)
+	    	{	
+	    		float norm;
+	    		vec3f_norm(&markers_pos[i], &norm);
+	    		bool isInside = true;
+	    		for (int j=0;j<swarm_pos.size();j++)
+	    		{
+	    			float swarm_norm;
+	    			vec3f_norm(&swarm_pos[j], &swarm_norm);
+	    			
+	    			if(fabs(norm-swarm_norm) > RADIUS_SQUARE) //max circle
+						isInside = false;
+	    		}
+	    		if (isInside)
+	    			consider_pos.push_back(markers_pos[i]);
+	    	}*/
+	    	printf("*******consider_pos size : %d\n", consider_pos.size());
+			/*find vehicles*/
+	    	for (int i = 0; i < g_vehicle_num; ++i)//for every vehicles
+	    	{
+	    		/*prediction*/
+	    		swarm_pos_predict[i] = swarm_pos[i] + swarm_pos_step[i] + REVISE_WEIGHT*swarm_pos_err[i];
+	    		/*small wipe out*/
+	    		printf("swarm_pos_predict %d: %f %f %f\n",i, swarm_pos_predict[i](0), swarm_pos_predict[i](1), swarm_pos_predict[i](2));
+	    		std::vector<Vector3f> close_points;
+	    		for (int j = 0; j < consider_pos.size(); ++j)//for every considered points
+	    		{
+	    			Vector3f tmp_diff;
+	    			float tmp_norm;	  
+	    			tmp_diff(0) = consider_pos[j](0) - swarm_pos_predict[i](0);
+	    			tmp_diff(1) = consider_pos[j](1) - swarm_pos_predict[i](1);
+	    			tmp_diff(2) = consider_pos[j](2) - swarm_pos_predict[i](2);
+	    			vec3f_norm(&tmp_diff, &tmp_norm);
+
+	    			//printf("consider_pos: %f %f %f\n", consider_pos[j](0), consider_pos[j](1), consider_pos[j](2));
+	    			//printf("consider_pos: %f %f %f\n", tmp_diff(0), tmp_diff(1), tmp_diff(2));
+	    			//printf("*****inside radius : %f\n", tmp_norm);
+	    			if (tmp_norm < VEHICLE_SIZE)
+	    				close_points.push_back(consider_pos[j]);  			
+	    		}//j
+	    		//printf("**********close_points : %d\n", close_points.size());
+	    		/*condition 1 to 4*/
+	    		if (close_points.size() == 4) //condition 4
+	    		{
+	    			//printf("*****condition 4\n");
+	    			Vector3f tmp;
+	    			tmp(0) = tmp(1) = tmp(2) = 0;
+	    			for (int k = 0; k < 4; ++k)
+	    			{
+	    				tmp(0) = tmp(0) + close_points[k](0);
+	    				tmp(1) = tmp(1) + close_points[k](1);
+	    				tmp(2) = tmp(2) + close_points[k](2);	
+	    			}
+	    			tmp(0) = tmp(0)/4;
+    				tmp(1) = tmp(1)/4;
+    				tmp(2) = tmp(2)/4;
+	    			m_swarm_pos[i] = tmp;
+	    		}else if (close_points.size() == 3) //condition 3
+	    		{
+	    			//printf("*****condition 3\n");
+	    			Vector3f tmp_vec_1;
+	    			float tmp_len_1;
+	    			tmp_vec_1(0) = close_points[1](0) - close_points[0](0);
+	    			tmp_vec_1(1) = close_points[1](1) - close_points[0](1);
+	    			tmp_vec_1(2) = close_points[1](2) - close_points[0](2);
+	    			vec3f_norm(&tmp_vec_1, &tmp_len_1);
+
+	    			Vector3f tmp_vec_2;
+	    			float tmp_len_2;
+	    			tmp_vec_2(0) = close_points[2](0) - close_points[0](0);
+	    			tmp_vec_2(1) = close_points[2](1) - close_points[0](1);
+	    			tmp_vec_2(2) = close_points[2](2) - close_points[0](2);
+	    			vec3f_norm(&tmp_vec_2, &tmp_len_2);
+	    			
+	    			float ctheta = (tmp_vec_1(0)*tmp_vec_2(0)+tmp_vec_1(1)*tmp_vec_2(1)+tmp_vec_1(2)*tmp_vec_2(2))/(tmp_len_1*tmp_len_2);
+	    			if (ctheta < 0.75 && ctheta > 0.65)
+	    			{
+	    				if (tmp_len_2/tmp_len_1 < 1.45 && tmp_len_2/tmp_len_1 > 1.35)
+	    				{
+	    					Vector3f tmp;
+			    			tmp(0) = 0.5*(close_points[2](0) + close_points[0](0));
+			    			tmp(1) = 0.5*(close_points[2](1) + close_points[0](1));
+			    			tmp(2) = 0.5*(close_points[2](2) + close_points[0](2));	
+			    			m_swarm_pos[i] = tmp;
+	    				} else if (tmp_len_1/tmp_len_2 < 1.45 && tmp_len_1/tmp_len_2 > 1.35)
+	    				{
+	    					Vector3f tmp;
+			    			tmp(0) = 0.5*(close_points[1](0) + close_points[0](0));
+			    			tmp(1) = 0.5*(close_points[1](1) + close_points[0](1));
+			    			tmp(2) = 0.5*(close_points[1](2) + close_points[0](2));	
+			    			m_swarm_pos[i] = tmp;
+	    				} else{
+	    					printf("*****condition 3 failed! failure number : 1\n");
+	    				}
+	    			} else if (ctheta < 0.1 && fabs(tmp_len_2-tmp_len_1)<0.2)
+	    			{
+	    				Vector3f tmp;
+			    		tmp(0) = 0.5*(close_points[2](0) + close_points[1](0));
+			    		tmp(1) = 0.5*(close_points[2](1) + close_points[1](1));
+			    		tmp(2) = 0.5*(close_points[2](2) + close_points[1](2));	
+			    		m_swarm_pos[i] = tmp;
+	    			} else {
+	    				printf("*****condition 3 failed! failure number : 2\n");
+	    			}
+	    		} else if (close_points.size() == 2) //condition 2
+	    		{
+	    			//printf("*****condition 2\n");
+    				Vector3f tmp_vec;
+    				float tmp_len;
+		    		tmp_vec(0) = close_points[1](0) - close_points[0](0);
+		    		tmp_vec(1) = close_points[1](1) - close_points[0](1);
+		    		tmp_vec(2) = close_points[1](2) - close_points[0](2);	
+		    		vec3f_norm(&tmp_vec, &tmp_len);
+
+		    		if (tmp_len > VEHICLE_EDGE_THRESHOLD && tmp_len < VEHICLE_EDGE_THRESHOLD+0.02)
+		    		{
+		    			Vector3f tmp;
+			    		tmp(0) = 0.5*(close_points[1](0) + close_points[0](0));
+			    		tmp(1) = 0.5*(close_points[1](1) + close_points[0](1));
+			    		tmp(2) = 0.5*(close_points[1](2) + close_points[0](2));	
+			    		m_swarm_pos[i] = tmp;
+		    		} else if (tmp_len < VEHICLE_EDGE_THRESHOLD && tmp_len > VEHICLE_EDGE_THRESHOLD-0.02)
+		    		{
+		    			Vector3f center_pos;
+		    			center_pos(0) = 0.5*(close_points[1](0) + close_points[0](0));
+			    		center_pos(1) = 0.5*(close_points[1](1) + close_points[0](1));
+			    		center_pos(2) = 0.5*(close_points[1](2) + close_points[0](2));	
+			    		Vector3f predict_diff;
+			    		predict_diff(0) = swarm_pos_predict[i](0) - center_pos(0);
+			    		predict_diff(1) = swarm_pos_predict[i](1) - center_pos(1);
+			    		predict_diff(2) = swarm_pos_predict[i](2) - center_pos(2);
+			    		float tmp_dist;
+			    		vec3f_norm(&predict_diff, &tmp_dist);
+
+			    		float ratio = 0.035/tmp_dist;
+			    		Vector3f tmp;
+			    		tmp(0) = (1-ratio)*center_pos(0) + ratio*swarm_pos_predict[0](0);
+			    		tmp(1) = (1-ratio)*center_pos(1) + ratio*swarm_pos_predict[0](1);
+			    		tmp(2) = (1-ratio)*center_pos(2) + ratio*swarm_pos_predict[0](2);	
+			    		m_swarm_pos[i] = tmp;
+		    		} else {
+		    			printf("*****condition 2 failed! failure number : 0\n");
+		    		}
+
+	    		} else if (close_points.size() == 1)
+	    		{
+	    			//printf("*****condition 1\n");
+	    			Vector3f predict_diff;
+		    		predict_diff(0) = swarm_pos_predict[i](0) - close_points[0](0);
+		    		predict_diff(1) = swarm_pos_predict[i](1) - close_points[0](1);
+		    		predict_diff(2) = swarm_pos_predict[i](2) - close_points[0](2);
+		    		float tmp_dist;
+		    		vec3f_norm(&predict_diff, &tmp_dist);
+
+		    		float ratio = 0.035/tmp_dist;
+		    		Vector3f tmp;
+		    		tmp(0) = (1-ratio)*close_points[0](0) + ratio*swarm_pos_predict[0](0);
+		    		tmp(1) = (1-ratio)*close_points[0](1) + ratio*swarm_pos_predict[0](1);
+		    		tmp(2) = (1-ratio)*close_points[0](2) + ratio*swarm_pos_predict[0](2);	
+		    		m_swarm_pos[i] = tmp;
+	    		} else {
+	    			printf("*****Cannot find vehicle%d\n", i);
+	    			continue;
+	    		}
+
+	    		/*renew error*/
+	    		swarm_pos_err[i](0) = m_swarm_pos[i](0) - swarm_pos_predict[i](0);
+	    		swarm_pos_err[i](1) = m_swarm_pos[i](1) - swarm_pos_predict[i](1);
+	    		swarm_pos_err[i](2) = m_swarm_pos[i](2) - swarm_pos_predict[i](2);
+
+	    	}//i
+
+			/*renew and publish*/
+	    	for (int i = 0; i < swarm_pos.size(); ++i)
+	    	{
+	    		swarm_pos_step[i](0) = m_swarm_pos[i](0) - swarm_pos[i](0);
+	    		swarm_pos_step[i](1) = m_swarm_pos[i](1) - swarm_pos[i](1);
+	    		swarm_pos_step[i](2) = m_swarm_pos[i](2) - swarm_pos[i](2);
+
+	    		swarm_pos[i] = m_swarm_pos[i];
+	    		m_pos_estmsg.pos_est.x = swarm_pos[i](0);
+				m_pos_estmsg.pos_est.y = swarm_pos[i](1);
+				m_pos_estmsg.pos_est.z = swarm_pos[i](2);
+				m_pos_estmsg.vehicle_index = i;
+	    		m_pos_est_v[i].publish(m_pos_estmsg);
+
+	    		printf("*****vehicle%d: %f  %f  %f\n", i, swarm_pos[i](0), swarm_pos[i](1), swarm_pos[i](2));
+	    	}
+		}// else if  	
 	}
 		
 	/*void pos_estCallback(const easyfly::pos_est::ConstPtr& est, int vehicle_index)

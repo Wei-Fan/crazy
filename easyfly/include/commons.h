@@ -25,4 +25,10 @@ float dead_zone_f(float a, float b);
 #define Hovering 5
 #define Circling 6
 //enum enum_TOL_cmd{TakeOff, Land, Kill}
+
+#define RADIUS_SQUARE 0.4
+#define VEHICLE_SIZE 0.15//depends on crazyflies size
+#define VEHICLE_EDGE_THRESHOLD 0.065 
+#define VEHICLE_DRIFT 0.3//depends on crazyflies maxium velocity
+#define REVISE_WEIGHT 0.1
 #endif
