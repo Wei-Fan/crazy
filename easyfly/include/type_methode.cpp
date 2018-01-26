@@ -302,3 +302,35 @@ void writeData_binf(const char* fname, float number)
 	fputs (inputf,file_ptr);
 	fclose (file_ptr);
 }
+
+void vec3f_angle(Vector3f* a, Vector3f* b, float* angleInRad)
+{
+	float norm_a, norm_b;
+	vec3f_norm(a,&norm_a);
+	vec3f_norm(b,&norm_b);
+	*angleInRad = acos(vec3f_dot(a,b)/(norm_a*norm_b));
+}
+bool IsUAVForm(Vector3f* a, Vector3f*b)
+{
+	float length_Rate = vec3f_length(a)/vec3f_length(b);
+	float angle;
+	vec3f_angle(a, b, &angle);
+
+	if((((1/1.41421356-0.2<length_Rate<1/1.41421356+0.2)||(1.41421356-0.2<length_Rate<1.41421356+0.2))&&(M_PI/4-0.1<angle<M_PI+0.10))||(0.8<length_Rate<1.2 && M_PI/2-0.4<angle<M_PI/2+0.4))
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+	
+}
+Vector3f CreateVectorFromTwoPts(Vector3f* a, Vector3f* b)
+{
+	Vector3f result;
+	result(0) = (*b)(0) - (*a)(0);
+	result(1) = (*b)(1) - (*a)(1);
+	result(2) = (*b)(2) - (*a)(2);
+	return result;
+}

@@ -670,21 +670,94 @@ public:
 	    		}//j
 	    		//printf("**********close_points : %d\n", close_points.size());
 	    		/*condition 1 to 4*/
-	    		if (close_points.size() == 4) //condition 4
+	    		if (close_points.size() >= 4 && close_points.size() <= 4*g_vehicle_num) //condition 4
 	    		{
-	    			//printf("*****condition 4\n");
-	    			Vector3f tmp;
-	    			tmp(0) = tmp(1) = tmp(2) = 0;
-	    			for (int k = 0; k < 4; ++k)
-	    			{
-	    				tmp(0) = tmp(0) + close_points[k](0);
-	    				tmp(1) = tmp(1) + close_points[k](1);
-	    				tmp(2) = tmp(2) + close_points[k](2);	
-	    			}
-	    			tmp(0) = tmp(0)/4;
-    				tmp(1) = tmp(1)/4;
-    				tmp(2) = tmp(2)/4;
-	    			m_swarm_pos[i] = tmp;
+	    			bool FoundVehicle_i = false;
+					/*find vehicle center from close_points*/
+		    		for (int j = 0; j < close_points.size(); ++j)
+		    		{
+		    			//printf("********** j : %d\n", j);
+		    			//printf("FoundVehicle_i : %d\n", FoundVehicle_i);
+		    			if (FoundVehicle_i)
+		    				break;
+		    			/*record all the vectors that based on points j*/
+		    			std::vector<Vector3f> consider_vec;
+		    			for (int k = 0; k < close_points.size(); ++k)
+		    			{
+		    				if (k != j)
+		    				{
+		    					Vector3f tmp_vec;
+			    				tmp_vec(0) = close_points[k](0) - close_points[j](0);
+			    				tmp_vec(1) = close_points[k](1) - close_points[j](1);
+			    				tmp_vec(2) = close_points[k](2) - close_points[j](2);
+			    				consider_vec.push_back(tmp_vec);
+		    				}
+		    			}
+		    			/*count the number of right pairs*/
+		    			for (int p = 0; p < consider_vec.size(); ++p)
+		    			{
+		    				//printf("********** p : %d\n", p);
+		    				std::vector<Vector3f> swarm_pos_p;
+		    				int count_p = 0;
+		    				float len_p;
+		    				vec3f_norm(&consider_vec[p], &len_p);
+		    				for (int q = 0; q < consider_vec.size(); ++q)
+		    				{
+		    					if (q != p)
+		    					{
+		    						//printf("********** q : %d\n", q);
+				    				float len_q;
+				    				vec3f_norm(&consider_vec[q], &len_q);
+				    				float ctheta = (consider_vec[p](0)*consider_vec[q](0)+consider_vec[p](1)*consider_vec[q](1)+consider_vec[p](2)*consider_vec[q](2))/(len_p*len_q);
+			    					if (ctheta < 0.2 && len_q/len_p < 1.05 && len_q/len_p > 1.05)
+			    					{
+			    						//printf("condition 1\n");
+			    						Vector3f tmp_pos;
+			    						tmp_pos(0) = 0.5*(consider_vec[p](0) + consider_vec[q](0)) + close_points[j](0);
+			    						tmp_pos(1) = 0.5*(consider_vec[p](1) + consider_vec[q](1)) + close_points[j](1);
+			    						tmp_pos(2) = 0.5*(consider_vec[p](2) + consider_vec[q](2)) + close_points[j](2);
+			    						swarm_pos_p.push_back(tmp_pos);
+			    						count_p++;
+			    					} else if (ctheta < 0.75 && ctheta > 0.65 && len_q/len_p < 1.45 && len_q/len_p > 1.35)
+			    					{
+			    						//printf("condition 2\n");
+			    						Vector3f tmp_pos;
+			    						tmp_pos(0) = 0.5*consider_vec[q](0) + close_points[j](0);
+			    						tmp_pos(1) = 0.5*consider_vec[q](1) + close_points[j](1);
+			    						tmp_pos(2) = 0.5*consider_vec[q](2) + close_points[j](2);
+			    						swarm_pos_p.push_back(tmp_pos);
+			    						count_p++;
+			    					} else if (ctheta < 0.75 && ctheta > 0.65 && len_p/len_q < 1.45 && len_p/len_q > 1.35)
+			    					{
+			    						//printf("condition 3\n");
+			    						Vector3f tmp_pos;
+			    						tmp_pos(0) = 0.5*consider_vec[p](0) + close_points[j](0);
+			    						tmp_pos(1) = 0.5*consider_vec[p](1) + close_points[j](1);
+			    						tmp_pos(2) = 0.5*consider_vec[p](2) + close_points[j](2);
+			    						swarm_pos_p.push_back(tmp_pos);
+			    						count_p++;
+			    					}
+		    					}//if
+		    				}//for q
+		    				if (count_p == 2)
+		    				{
+		    					m_swarm_pos[i](0) = (swarm_pos_p[0](0) + swarm_pos_p[1](0))/2;
+		    					m_swarm_pos[i](1) = (swarm_pos_p[0](1) + swarm_pos_p[1](1))/2;
+		    					m_swarm_pos[i](2) = (swarm_pos_p[0](2) + swarm_pos_p[1](2))/2;
+		    					FoundVehicle_i = true;
+		    					break;
+		    				} else if (count_p == 1)
+		    				{
+		    					m_swarm_pos[i] = swarm_pos_p[0];
+		    					FoundVehicle_i = true;
+		    					break;
+		    				}		
+		    			}//for p
+		    		}//for j
+		    		if (!FoundVehicle_i)
+    				{
+    				printf("*****condition 4 failed! failure number : 1\n");
+    				}
 	    		}else if (close_points.size() == 3) //condition 3
 	    		{
 	    			//printf("*****condition 3\n");
