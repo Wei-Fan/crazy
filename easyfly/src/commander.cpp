@@ -432,7 +432,7 @@ public:
 				tmp_max = tmp;	
 		}
 		amp_coeff = 400.0f/tmp_max;                        
-		printf("tmp_max : %f***********amp_coeff : %f\n", tmp_max, amp_coeff);   
+		//printf("tmp_max : %f***********amp_coeff : %f\n", tmp_max, amp_coeff);   
 
 		namedWindow("vicon_test");	
 		Point p1 = Point(50,50);
@@ -441,29 +441,28 @@ public:
 
 
 		for(int i=0;i<x_marker_init.size();i++){
-			circle(src, Point(500-y_marker_init[i]*amp_coeff, 500+x_marker_init[i]*amp_coeff), 2, Scalar(0, 255, 0));  
+			circle(src, Point(500+x_marker_init[i]*amp_coeff, 500-y_marker_init[i]*amp_coeff), 2, Scalar(0, 255, 0));  
 	    	printf("x1 %d: %f\n", i, x_marker_init[i]);
 	    	printf("y1 %d: %f\n", i, y_marker_init[i]);
     	}
 
 
 		for(int i=0;i<x_init_pos.size();i++){
-			circle(src, Point(500-y_init_pos[i]*amp_coeff, 500+x_init_pos[i]*amp_coeff), 2, Scalar(0, 255, 0));  
+			circle(src, Point(500+x_init_pos[i]*amp_coeff, 500-y_init_pos[i]*amp_coeff), 2, Scalar(0, 255, 0));  
 	    	printf("x%d: %f\n", i, x_init_pos[i]);
 	    	printf("y%d: %f\n", i, y_init_pos[i]);
     	}	
 		imshow("vicon_test", src);
 	}
 
-	/*void configDone()
-	{
-
-	}*/
-
 	//For sequence intialization
 	static void onMouse(int event, int x, int y, int, void* userInput)
 	{
 		if (event != EVENT_LBUTTONDOWN) return;
+		//printf("###########onMouse x : %d\n", x);
+		//printf("###########onMouse y : %d\n", y);
+		int x_world = x - 500;
+		int y_world = 500 - y;
 		Mat *img = (Mat*)userInput;
 		circle(*img, Point(x, y), 10, Scalar(0, 0, 255));
 		imshow("vicon_test", *img);
@@ -471,7 +470,8 @@ public:
 		float nearest_dist=-1.0f;
 		int nearest_index=0;
 		for(int i=0;i<x_init_pos.size();i++){
-			float sq_dist=(y-x_init_pos[i]*amp_coeff-500)*(y-x_init_pos[i]*amp_coeff-500)+(x+y_init_pos[i]*amp_coeff-500)*(x+y_init_pos[i]*amp_coeff-500);
+			float sq_dist=sqrt((x_world-x_init_pos[i]*amp_coeff)*(x_world-x_init_pos[i]*amp_coeff)+(y_world-y_init_pos[i]*amp_coeff)*(y_world-y_init_pos[i]*amp_coeff));
+			//printf("############# sq_dist : %f\n", sq_dist);
 			if(sq_dist<nearest_dist||nearest_dist<0){
 				nearest_dist=sq_dist;
 				nearest_index=i;

@@ -39,7 +39,7 @@
       <arg name="uri" default="radio://0/80/250K/0xE7E7E7E7E7"/>
       <!--rosparam command="load" file="$(find easyfly)/config/pid_param.yaml"/-->
       <node pkg="easyfly" type="swarm_addCf" name="swarm_addCf0" output="screen">
-          <param name="group_index" value="0"/>
+          <param name="group_index" value="1"/>
           <param name="g_vehicle_num" value="$(arg g_vehicle_num)" type="int" />
           <param name="uri" value="$(arg uri)" type="string"/>
           <param name="tf_prefix" value="$(arg tf_prefix)" />
@@ -56,7 +56,7 @@
       <arg name="uri" default="radio://0/0/250K/0xE8E8E8E8E8"/>
       <node pkg="easyfly" type="swarm_addCf" name="swarm_addCf1" output="screen">
         <param name="uri" value="$(arg uri)" type="string" />
-        <param name="group_index" value="1"/>
+        <param name="group_index" value="0"/>
         <param name="g_vehicle_num" value="$(arg g_vehicle_num)" type="int" />
         <param name="tf_prefix" value="$(arg tf_prefix)" />
         <param name="roll_trim" value="$(arg roll_trim)" />
