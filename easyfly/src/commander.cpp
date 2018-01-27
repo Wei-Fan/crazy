@@ -28,7 +28,7 @@
 #include <opencv2/imgproc.hpp>
 
 
-int g_vehicle_num=1;
+int g_vehicle_num=2;
 int g_joy_num=1;
 using namespace Eigen;
 using namespace std;
@@ -42,6 +42,7 @@ vector<float> x_marker_init;
 vector<float> y_marker_init;
 vector<int> index_sequence;
 float amp_coeff;
+float about_edge = 0.5;
 void give_index(int index)
 {
 	index_sequence.push_back(index);
@@ -531,34 +532,31 @@ public:
 		}
 	}
 
-	void unite(vector<float> &x_init_pos,vector<float> &y_init_pos,vector<float> &x_marker_pos,vector<float> &y_marker_pos)
+			void unite()
 	{
-		vector<bool> all_union(x_marker_pos.size(),0);
-
-		for(int i=0;i<x_marker_pos.size();++i)//kick out noise
+		vector<bool> all_union(x_marker_init.size(),0);
+		for(int i=0;i<x_marker_init.size();++i)
 		{
 		    int within_circle = 0;
-			for(int j=0;j<x_marker_pos.size();++j)
+			for(int j=1;j<x_marker_init.size();++j)
 			{
-				if(sqrt((x_marker_pos[i]-x_marker_pos[j])*(x_marker_pos[i]-x_marker_pos[j])+(y_marker_pos[i]-y_marker_pos[j])*(y_marker_pos[i]-y_marker_pos[j]))<ABOUT_EDGE)
+				if(sqrt((x_marker_init[i]-x_marker_init[j])*(x_marker_init[i]-x_marker_init[j])+(y_marker_init[i]-y_marker_init[j])*(y_marker_init[i]-y_marker_init[j]))<about_edge)
 					++within_circle;
 			}
 			if(within_circle<3)
 				all_union[i]=1;
 		}
-		for(int i=0;i<x_marker_pos.size();++i)//choose the first point
+		for(int i=0;i<x_marker_init.size();++i)
 		{
 			if(all_union[i])continue;
 			all_union[i]=1;
-			vector<int> num_of_point(2,-1);
-			vector<float> min_dstc(3,-1);
-		    int num_of_max_dstc1,num_of_max_dstc2; 
-
+			vector<int> num_of_point(3,-1);
+			vector<float> min_dstc(2,-1);
 		    float temp_dstc;
-		    for(int j=1;j<x_marker_pos.size();++j)//find the nearest point
+		    for(int j=1;j<x_marker_init.size();++j)
 		    {
 		    	if(all_union[j])continue;
-		    	temp_dstc=(x_marker_pos[i]-x_marker_pos[j])*(x_marker_pos[i]-x_marker_pos[j])+(y_marker_pos[i]-y_marker_pos[j])*(y_marker_pos[i]-y_marker_pos[j]);
+		    	temp_dstc=(x_marker_init[i]-x_marker_init[j])*(x_marker_init[i]-x_marker_init[j])+(y_marker_init[i]-y_marker_init[j])*(y_marker_init[i]-y_marker_init[j]);
 		    	if(min_dstc[0]>temp_dstc||min_dstc[0]<0)
 		    	{
 		    		num_of_point[0]=j;
@@ -566,10 +564,10 @@ public:
 		    	}
 		    }
 		    all_union[num_of_point[0]]=1;
-		    for(int j=1;j<x_marker_pos.size();++j)//find the second nearest point
+		    for(int j=1;j<x_marker_init.size();++j)
 		    {
 		    	if(all_union[j])continue;
-		    	temp_dstc=(x_marker_pos[i]-x_marker_pos[j])*(x_marker_pos[i]-x_marker_pos[j])+(y_marker_pos[i]-y_marker_pos[j])*(y_marker_pos[i]-y_marker_pos[j]);
+		    	temp_dstc=(x_marker_init[i]-x_marker_init[j])*(x_marker_init[i]-x_marker_init[j])+(y_marker_init[i]-y_marker_init[j])*(y_marker_init[i]-y_marker_init[j]);
 		    	if(min_dstc[1]>temp_dstc||min_dstc[1]<0)
 		    	{
 		    		num_of_point[1]=j;
@@ -577,44 +575,24 @@ public:
 		    	}
 		    }
 		    all_union[num_of_point[1]]=1;
-		    min_dstc[2]=(x_marker_pos[num_of_point[1]]-x_marker_pos[num_of_point[0]])*(x_marker_pos[num_of_point[1]]-x_marker_pos[num_of_point[0]])+(y_marker_pos[num_of_point[1]]-y_marker_pos[num_of_point[0]])*(y_marker_pos[num_of_point[1]]-y_marker_pos[num_of_point[0]]);
-            float max_dstc;
-               
-		    if(min_dstc[0]>min_dstc[1])//find the farthest two points
-		    {
-                num_of_max_dstc1=i;
-                num_of_max_dstc2=num_of_point[0];
-                max_dstc=min_dstc[0];
-		    }
-		    else{
-		    	num_of_max_dstc1=i;
-                num_of_max_dstc2=num_of_point[1];
-                max_dstc=min_dstc[1];
-		    }
-		    if(max_dstc<min_dstc[2])
-		    {
-		    	num_of_max_dstc1=num_of_point[0];
-                num_of_max_dstc2=num_of_point[1];
-		    }
-		    temp_dstc=x_marker_pos[num_of_max_dstc1]+x_marker_pos[num_of_max_dstc2];//calculate the centre point
+		    temp_dstc=x_marker_init[num_of_point[0]]+x_marker_init[num_of_point[1]];
 		    x_init_pos.push_back(temp_dstc/2);
-		    temp_dstc=y_marker_pos[num_of_max_dstc1]+y_marker_pos[num_of_max_dstc2];
+		    temp_dstc=y_marker_init[num_of_point[0]]+y_marker_init[num_of_point[1]];
 		    y_init_pos.push_back(temp_dstc/2);
 
-		    for(int j=1;j<x_marker_pos.size();++j)//find and kick out the forth point, if cant find, it doesnt matter
+		    float temp_cross_product=-9999;
+		    for(int j=1;j<x_marker_init.size();++j)
 		    {
 		    	if(all_union[j])continue;
-		    	float cross_product,len_1,len_2;
-		    	len_1=sqrt((x_marker_pos[num_of_max_dstc1]-x_marker_pos[j])*(x_marker_pos[num_of_max_dstc1]-x_marker_pos[j])+(y_marker_pos[num_of_max_dstc1]-y_marker_pos[j])*(y_marker_pos[num_of_max_dstc1]-y_marker_pos[j]));
-		    	len_2=sqrt((x_marker_pos[num_of_max_dstc2]-x_marker_pos[j])*(x_marker_pos[num_of_max_dstc2]-x_marker_pos[j])+(y_marker_pos[num_of_max_dstc2]-y_marker_pos[j])*(y_marker_pos[num_of_max_dstc2]-y_marker_pos[j]));
-		    	cross_product=(x_marker_pos[num_of_point[0]]-x_marker_pos[j])*(x_marker_pos[num_of_point[1]]-x_marker_pos[j])+(y_marker_pos[num_of_point[0]]-y_marker_pos[j])*(y_marker_pos[num_of_point[1]]-y_marker_pos[j]);
-		    	float cos_degree=cross_product/len_1/len_2;
-		    	if(cos_degree<0.09 && cos_degree>-0.09)
+		    	float cross_product;
+		    	cross_product=(x_marker_init[num_of_point[0]]-x_marker_init[j])*(x_marker_init[num_of_point[1]]-x_marker_init[j])+(y_marker_init[num_of_point[0]]-y_marker_init[j])*(y_marker_init[num_of_point[1]]-y_marker_init[j]);
+		    	if(cross_product<temp_cross_product||temp_cross_product<0)
 		    	{
-		    		all_union[j]=1;
-		    		return;
+		    		num_of_point[2]=j;
+		    		temp_cross_product=cross_product;
 		    	}
 		    }
+		    all_union[num_of_point[2]]=1;
 		}
 	}
 
@@ -639,8 +617,8 @@ public:
 					z_ground = pos(2);
 				}
 			}
-    			
-    		unite(x_init_pos,y_init_pos,x_marker_init,y_marker_init);//identify crazyflies and get their position into swarm_pos
+    		printf("**********size : %d\n", x_init_pos.size());
+    		unite();//identify crazyflies and get their position into swarm_pos
 			bool sequenceIsOk = false;
 			while(!sequenceIsOk)//use mouse to rearrange index of swarm_pos
 			{
@@ -1006,7 +984,7 @@ public:
 			}
 			(m_att_est_v[vehicle_index])(2) += yaw_bias[vehicle_index];
 		}
-		printf("YAW_GET_commander:  %f   %f \n",est->att_est.z, (m_att_est_v[vehicle_index])(2));
+		//printf("YAW_GET_commander:  %f   %f \n",est->att_est.z, (m_att_est_v[vehicle_index])(2));
 
 
 	}
