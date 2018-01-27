@@ -285,6 +285,14 @@ public:
 		if(isFirstAttEst){
 			isFirstAttEst = false;
 		}
+		char msg_name[50];
+		sprintf(msg_name,"/vehicle%d/yaw_bias",m_group_index);
+		ros::NodeHandle n;
+	// ros::NodeHandle n;
+		float yaw_bias=0;
+		n.getParam(msg_name, yaw_bias);
+		(m_est_vecs.m_att_est)(2) += yaw_bias;
+		printf("YAW_GET_controller:  %f   %f \n",est->att_est.z, (m_est_vecs.m_att_est)(2));
 	}
 
 	void recordingFormatChanging(M_recording* recording)
@@ -505,9 +513,10 @@ void Controller::control_nonLineaire(M_recording* m_recording, const Vector3f* p
 			y_sp = RPY_des(1);
 			z_sp = RPY_des(2);
 
-			for(int i=0;i<3;i++){
+			for(int i=0;i<2;i++){
 				(*Output)(i) = RPY_des(i);
 			}
+			(*Output)(2) = 0.0f;
 			(*Output)(0) = -(*Output)(0);
 			//(*Output)(2) = RPY_des(2);
 			Vector3f temp;
@@ -524,7 +533,7 @@ void Controller::control_nonLineaire(M_recording* m_recording, const Vector3f* p
 
 			float thrust_force = vec3f_dot(&_acc_Sp_W,&temp);
 
-			thrust_force /= 480.0f;
+			thrust_force /= 470.0f;
 			thrust_force = std::min(thrust_force,max_thrust);
 			(*Output)(3) = thrust_force;		
 

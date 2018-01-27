@@ -15,8 +15,8 @@ public:
 	: loop_record(0)
 	, m_group_index(0)
 	, m_resFnameRoot("/home/walt/catkin_ws/src/crazyflie_ros-first_trails/easyfly/resultat/vehicle0/")
-		,m_pidX(3.5, 1.9, 2.0, 7, 0.0, -1e6, 1e6, -0.3, 0.3) //kp, kd, ki, kpp, ff, minOutput, maxOutput, integratorMin, integratorMax;
-		,m_pidY(3.5, 1.9, 2.0, 7, 0.0, -1e6, 1e6, -0.3, 0.3)
+		,m_pidX(3.4, 1.8, 1.9, 7, 0.0, -1e6, 1e6, -0.3, 0.3) //kp, kd, ki, kpp, ff, minOutput, maxOutput, integratorMin, integratorMax;
+		,m_pidY(3.4, 1.8, 1.9, 7, 0.0, -1e6, 1e6, -0.3, 0.3)
 		//,m_pidZ( 5000.0, 6000.0, 3500.0, 2.0, 0.5, 1000.0, 60000.0, -1000.0, 1000.0)
 		,m_pidZ(4.5, 1.2, 3.0, 8.0, 0.0, -1e6, 1e6, -2, 2)
 
@@ -26,8 +26,8 @@ public:
 
 		,m_pidRoll(1.0, 0.2, 0.8, 0.2, 0.6, -0.05, 0.05, -0.3, 0.3)
 		,m_pidPitch(1.0, 0.2, 0.8, 0.2 , 0.6, -0.0, 0.0, -0.0, 0.0)
-		,m_pidYaw(1.0, 1.0, 0.2, 0.2, 0.2, -0, 0, 0.0, 0.0)
-		//,m_pidYaw(-2.0, -2.0, 0.0, 2.0, 0.6, -2.0, 2.0, 0.0, 0.0)
+		//,m_pidYaw(1.0, 1.0, 0.2, 0.2, 0.2, -0, 0, 0.0, 0.0)
+		,m_pidYaw(-0.5, 0.0, 0.0, 2.0, 0.6, -2.0, 2.0, 0.0, 0.0)
 
 		
 		
