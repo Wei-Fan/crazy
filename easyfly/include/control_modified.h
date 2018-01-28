@@ -15,8 +15,8 @@ public:
 	: loop_record(0)
 	, m_group_index(0)
 	, m_resFnameRoot("/home/walt/catkin_ws/src/crazyflie_ros-first_trails/easyfly/resultat/vehicle0/")
-		,m_pidX(190.0, 0.5, 2.0, 2.5, 0.0, -1e6, 1e6, -0.3, 0.3) //kp, kd, ki, kpp, ff, minOutput, maxOutput, integratorMin, integratorMax;
-		,m_pidY(190.0, 0.5, 2.0, 2.5, 0.0, -1e6, 1e6, -0.3, 0.3)//kp 22 kd 1.8 ki 2.0 kpp 7
+		,m_pidX(160.0, 0.5, 2.0, 2.5, 0.0, -1e6, 1e6, -0.3, 0.3) //kp, kd, ki, kpp, ff, minOutput, maxOutput, integratorMin, integratorMax;
+		,m_pidY(160.0, 0.5, 2.0, 2.5, 0.0, -1e6, 1e6, -0.3, 0.3)//kp 22 kd 1.8 ki 2.0 kpp 7
 		//,m_pidZ( 5000.0,6000.0, 3500.0, 2.0, 0.5, 1000.0, 60000.0, -1000.0, 1000.0)
 		,m_pidZ(170.0, 1.65, 5.0, 5.0, 0.0, -1e6, 1e6, -2, 2)//kpp 3
 
