@@ -533,7 +533,7 @@ void Controller::control_nonLineaire(M_recording* m_recording, const Vector3f* p
 
 			float thrust_force = vec3f_dot(&_acc_Sp_W,&temp);
 
-			thrust_force /= 470.0f;
+			thrust_force /= 440.0f;
 			thrust_force = std::min(thrust_force,max_thrust);
 			(*Output)(3) = thrust_force;		
 

@@ -28,7 +28,7 @@
 #include <opencv2/imgproc.hpp>
 
 
-int g_vehicle_num=2;
+int g_vehicle_num=1;
 int g_joy_num=1;
 using namespace Eigen;
 using namespace std;
