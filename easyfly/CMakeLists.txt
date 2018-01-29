@@ -56,6 +56,8 @@ find_package(Boost REQUIRED COMPONENTS
 #  bind
   REQUIRED)
 
+FIND_PACKAGE(OpenCV REQUIRED)
+
 ###################################
 ## catkin specific configuration ##
 ###################################
@@ -94,6 +96,7 @@ target_link_libraries(commander
   #GLU GL glut
   ${catkin_LIBRARIES}
   ${Boost_LIBRARIES}
+  ${OpenCV_LIBS}
  # /home/wade/catkin_ws/src/crazyflie_ros-first_trails/easyfly/include/type_methode.cpp
  # /home/wade/catkin_ws/src/crazyflie_ros-first_trails/easyfly/include/gl_declair.cpp
  #gl_declair

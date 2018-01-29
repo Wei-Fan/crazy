@@ -334,3 +334,9 @@ Vector3f CreateVectorFromTwoPts(Vector3f* a, Vector3f* b)
 	result(2) = (*b)(2) - (*a)(2);
 	return result;
 }
+void number_times_vec3f(float* a, Vector3f* v)
+{
+	(*v)(0) = (*a) * (*v)(0);
+	(*v)(1) = (*a) * (*v)(1); 
+	(*v)(2) = (*a) * (*v)(2);
+}

@@ -58,8 +58,10 @@ void writeData_bin(const char* fname, Vector3f* vec);
 
 void writeData_binf(const char* fname, float number);
 
-bool IsUAVForm(Vector3f *a, Vector3f *b);
+bool IsUAVForm(Vector3f* a, Vector3f*b);
 
 Vector3f CreateVectorFromTwoPts(Vector3f* a, Vector3f* b);
+
+void number_times_vec3f(float* a, Vector3f* v);
 
 #endif

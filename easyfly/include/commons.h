@@ -12,7 +12,7 @@ float dead_zone_f(float a, float b);
 #define DEG2RAD 0.01745
 #define RAD2DEG 57.3
 #define MAX_VELOCITY 2
-#define CIRCLING_R 3
+#define CIRCLING_R 0.8
 
 #define MODE_RAW 0
 #define MODE_POS 1
@@ -31,6 +31,5 @@ float dead_zone_f(float a, float b);
 #define VEHICLE_EDGE_THRESHOLD 0.065 
 #define VEHICLE_DRIFT 0.3//depends on crazyflies maxium velocity
 #define REVISE_WEIGHT 0.1
-#define VICON_MARKER_DISTANCE 0.05
 #define ABOUT_EDGE 0.5
 #endif
