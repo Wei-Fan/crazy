@@ -24,6 +24,7 @@ float dead_zone_f(float a, float b);
 #define Idle 4
 #define Hovering 5
 #define Circling 6
+#define Funny 22
 //enum enum_TOL_cmd{TakeOff, Land, Kill}
 
 #define RADIUS_SQUARE 0.4

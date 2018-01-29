@@ -358,6 +358,10 @@ public:
 							}
 							break;
 						}
+
+						case Funny:{
+							break;
+						}
 					}//end switch state
 					for(int i=0;i<g_vehicle_num;++i)
 					{
@@ -554,31 +558,94 @@ public:
 		}
 	}
 
-		
-	void att_estCallback(const easyfly::att_est::ConstPtr& est, int vehicle_index)
+	void unite(vector<float> &x_init_pos,vector<float> &y_init_pos,vector<float> &x_marker_pos,vector<float> &y_marker_pos)
 	{
-		//m_att_est_v[vehicle_index].Roll_est = est->Roll_est;
-		isGotAtt = true;
+		vector<bool> all_union(x_marker_pos.size(),0);
 
-		(m_att_est_v[vehicle_index])(0) = est->att_est.x;
-		(m_att_est_v[vehicle_index])(1) = est->att_est.y;
-		(m_att_est_v[vehicle_index])(2) = est->att_est.z;
-		if(yaw_manuel_ready){
-			if(!yaw_est_ready[vehicle_index]){
-				yaw_bias[vehicle_index]=yaw_manuel[vehicle_index] - est->att_est.z;
-				yaw_est_ready[vehicle_index]=true;
-				char msg_name[50];
-				sprintf(msg_name,"/vehicle%d/yaw_bias",vehicle_index);
-				ros::NodeHandle n;
-	// ros::NodeHandle n;
-				n.setParam(msg_name, yaw_bias[vehicle_index]);
+		for(int i=0;i<x_marker_pos.size();++i)//kick out noise
+		{
+		    int within_circle = 0;
+			for(int j=0;j<x_marker_pos.size();++j)
+			{
+				if(sqrt((x_marker_pos[i]-x_marker_pos[j])*(x_marker_pos[i]-x_marker_pos[j])+(y_marker_pos[i]-y_marker_pos[j])*(y_marker_pos[i]-y_marker_pos[j]))<ABOUT_EDGE)
+					++within_circle;
 			}
-			(m_att_est_v[vehicle_index])(2) += yaw_bias[vehicle_index];
+			if(within_circle<3)
+				all_union[i]=1;
 		}
-		//printf("YAW_GET_commander:  %f   %f \n",est->att_est.z, (m_att_est_v[vehicle_index])(2));
+		for(int i=0;i<x_marker_pos.size();++i)//choose the first point
+		{
+			if(all_union[i])continue;
+			all_union[i]=1;
+			vector<int> num_of_point(2,-1);
+			vector<float> min_dstc(3,-1);
 
+		    float temp_dstc;
+		    for(int j=1;j<x_marker_pos.size();++j)//find the nearest point
+		    {
+		    	if(all_union[j])continue;
+		    	temp_dstc=(x_marker_pos[i]-x_marker_pos[j])*(x_marker_pos[i]-x_marker_pos[j])+(y_marker_pos[i]-y_marker_pos[j])*(y_marker_pos[i]-y_marker_pos[j]);
+		    	if(min_dstc[0]>temp_dstc||min_dstc[0]<0)
+		    	{
+		    		num_of_point[0]=j;
+		    		min_dstc[0]=temp_dstc;
+		    	}
+		    }
+		    all_union[num_of_point[0]]=1;
+		    for(int j=1;j<x_marker_pos.size();++j)//find the second nearest point
+		    {
+		    	if(all_union[j])continue;
+		    	temp_dstc=(x_marker_pos[i]-x_marker_pos[j])*(x_marker_pos[i]-x_marker_pos[j])+(y_marker_pos[i]-y_marker_pos[j])*(y_marker_pos[i]-y_marker_pos[j]);
+		    	if(min_dstc[1]>temp_dstc||min_dstc[1]<0)
+		    	{
+		    		num_of_point[1]=j;
+		    		min_dstc[1]=temp_dstc;
+		    	}
+		    }
+		    all_union[num_of_point[1]]=1;
+		    min_dstc[2]=(x_marker_pos[num_of_point[1]]-x_marker_pos[num_of_point[0]])*(x_marker_pos[num_of_point[1]]-x_marker_pos[num_of_point[0]])+(y_marker_pos[num_of_point[1]]-y_marker_pos[num_of_point[0]])*(y_marker_pos[num_of_point[1]]-y_marker_pos[num_of_point[0]]);
+            
+            float max_dstc;   
+		    int num_of_max_dstc1,num_of_max_dstc2; 
+		    if(min_dstc[0]>min_dstc[1])//find the farthest two points
+		    {
+                num_of_max_dstc1=i;
+                num_of_max_dstc2=num_of_point[0];
+                max_dstc=min_dstc[0];
+		    }
+		    else{
+		    	num_of_max_dstc1=i;
+                num_of_max_dstc2=num_of_point[1];
+                max_dstc=min_dstc[1];
+		    }
+		    if(max_dstc<min_dstc[2])
+		    {
+		    	num_of_max_dstc1=num_of_point[0];
+                num_of_max_dstc2=num_of_point[1];
+		    }
 
+		    temp_dstc=x_marker_pos[num_of_max_dstc1]+x_marker_pos[num_of_max_dstc2];//calculate the centre point
+		    x_init_pos.push_back(temp_dstc/2);
+		    temp_dstc=y_marker_pos[num_of_max_dstc1]+y_marker_pos[num_of_max_dstc2];
+		    y_init_pos.push_back(temp_dstc/2);
+
+		    for(int j=1;j<x_marker_pos.size();++j)//find and kick out the forth point, if cant find, it doesnt matter
+		    {
+		    	if(all_union[j])continue;
+		    	float cross_product,len_1,len_2;
+		    	len_1=sqrt((x_marker_pos[num_of_max_dstc1]-x_marker_pos[j])*(x_marker_pos[num_of_max_dstc1]-x_marker_pos[j])+(y_marker_pos[num_of_max_dstc1]-y_marker_pos[j])*(y_marker_pos[num_of_max_dstc1]-y_marker_pos[j]));
+		    	len_2=sqrt((x_marker_pos[num_of_max_dstc2]-x_marker_pos[j])*(x_marker_pos[num_of_max_dstc2]-x_marker_pos[j])+(y_marker_pos[num_of_max_dstc2]-y_marker_pos[j])*(y_marker_pos[num_of_max_dstc2]-y_marker_pos[j]));
+		    	cross_product=(x_marker_pos[num_of_max_dstc2]-x_marker_pos[j])*(x_marker_pos[num_of_max_dstc1]-x_marker_pos[j])+(y_marker_pos[num_of_max_dstc2]-y_marker_pos[j])*(y_marker_pos[num_of_max_dstc1]-y_marker_pos[j]);
+		    	float cos_degree=cross_product/len_1/len_2;
+		    	if(cos_degree<0.08 && cos_degree>-0.08)
+		    	{
+		    		all_union[j]=1;
+		    		break;
+		    	}
+		    }
+		}
 	}
+	
 	void vicon_markerCallback(const vicon_bridge::Markers::ConstPtr& msg)
 	{	
 		m_markers = msg->markers;
@@ -940,6 +1007,28 @@ public:
 	    	}
 		}// else if  	
 	}
+
+	void att_estCallback(const easyfly::att_est::ConstPtr& est, int vehicle_index)
+	{
+		//m_att_est_v[vehicle_index].Roll_est = est->Roll_est;
+		isGotAtt = true;
+
+		(m_att_est_v[vehicle_index])(0) = est->att_est.x;
+		(m_att_est_v[vehicle_index])(1) = est->att_est.y;
+		(m_att_est_v[vehicle_index])(2) = est->att_est.z;
+		if(yaw_manuel_ready){
+			if(!yaw_est_ready[vehicle_index]){
+				yaw_bias[vehicle_index]=yaw_manuel[vehicle_index] - est->att_est.z;
+				yaw_est_ready[vehicle_index]=true;
+				char msg_name[50];
+				sprintf(msg_name,"/vehicle%d/yaw_bias",vehicle_index);
+				ros::NodeHandle n;
+				n.setParam(msg_name, yaw_bias[vehicle_index]);
+			}
+			(m_att_est_v[vehicle_index])(2) += yaw_bias[vehicle_index];
+		}
+		//printf("YAW_GET_commander:  %f   %f \n",est->att_est.z, (m_att_est_v[vehicle_index])(2));
+	}
 /***********************
 Concensus contol of UAVs
 ***********************/
@@ -1004,9 +1093,8 @@ Concensus contol of UAVs
 			input_temp(3) = thrust_i;
 			InputToUAVs.push_back(input_temp);
 		}
-
-
 	}
+
 	void AccSp_to_attSp(Vector3f* acc, Vector3f* att, int index, float* thrust_force)
 	{
 		float yaw_est = (m_att_est_v[index])(DimOfVarSpace);
@@ -1049,14 +1137,13 @@ Concensus contol of UAVs
 			*thrust_force = vec3f_dot(acc,&temp);
 
 			*thrust_force /= 480.0f;
-			*thrust_force = std::min(*thrust_force,max_thrust);
-			
+			*thrust_force = std::min(*thrust_force,max_thrust);		
 	}
 
 	void command_takeoff(int i, float dt)
 	{
 		reset_takeoff = false;
-//		g_statusFlight = statusTakingoff;		
+		//g_statusFlight = statusTakingoff;		
 		m_ctrl_v[i].posctrl_msg.pos_sp.x = _takeoff_Pos[i](0);
 		m_ctrl_v[i].posctrl_msg.pos_sp.y = _takeoff_Pos[i](1);
 		yawspReset(i);
@@ -1186,6 +1273,13 @@ Concensus contol of UAVs
 		}			
 		
 	}
+/*************************
+	Cmd Funny
+*************************/
+	void command_funny()
+	{
+
+	}
 /******************
 	Cmd landing
 *******************/
@@ -1202,95 +1296,6 @@ Concensus contol of UAVs
 		}
 
 	}
-
-	void unite(vector<float> &x_init_pos,vector<float> &y_init_pos,vector<float> &x_marker_pos,vector<float> &y_marker_pos)
-	{
-		vector<bool> all_union(x_marker_pos.size(),0);
-
-		for(int i=0;i<x_marker_pos.size();++i)//kick out noise
-		{
-		    int within_circle = 0;
-			for(int j=0;j<x_marker_pos.size();++j)
-			{
-				if(sqrt((x_marker_pos[i]-x_marker_pos[j])*(x_marker_pos[i]-x_marker_pos[j])+(y_marker_pos[i]-y_marker_pos[j])*(y_marker_pos[i]-y_marker_pos[j]))<ABOUT_EDGE)
-					++within_circle;
-			}
-			if(within_circle<3)
-				all_union[i]=1;
-		}
-		for(int i=0;i<x_marker_pos.size();++i)//choose the first point
-		{
-			if(all_union[i])continue;
-			all_union[i]=1;
-			vector<int> num_of_point(2,-1);
-			vector<float> min_dstc(3,-1);
-
-		    float temp_dstc;
-		    for(int j=1;j<x_marker_pos.size();++j)//find the nearest point
-		    {
-		    	if(all_union[j])continue;
-		    	temp_dstc=(x_marker_pos[i]-x_marker_pos[j])*(x_marker_pos[i]-x_marker_pos[j])+(y_marker_pos[i]-y_marker_pos[j])*(y_marker_pos[i]-y_marker_pos[j]);
-		    	if(min_dstc[0]>temp_dstc||min_dstc[0]<0)
-		    	{
-		    		num_of_point[0]=j;
-		    		min_dstc[0]=temp_dstc;
-		    	}
-		    }
-		    all_union[num_of_point[0]]=1;
-		    for(int j=1;j<x_marker_pos.size();++j)//find the second nearest point
-		    {
-		    	if(all_union[j])continue;
-		    	temp_dstc=(x_marker_pos[i]-x_marker_pos[j])*(x_marker_pos[i]-x_marker_pos[j])+(y_marker_pos[i]-y_marker_pos[j])*(y_marker_pos[i]-y_marker_pos[j]);
-		    	if(min_dstc[1]>temp_dstc||min_dstc[1]<0)
-		    	{
-		    		num_of_point[1]=j;
-		    		min_dstc[1]=temp_dstc;
-		    	}
-		    }
-		    all_union[num_of_point[1]]=1;
-		    min_dstc[2]=(x_marker_pos[num_of_point[1]]-x_marker_pos[num_of_point[0]])*(x_marker_pos[num_of_point[1]]-x_marker_pos[num_of_point[0]])+(y_marker_pos[num_of_point[1]]-y_marker_pos[num_of_point[0]])*(y_marker_pos[num_of_point[1]]-y_marker_pos[num_of_point[0]]);
-            
-            float max_dstc;   
-		    int num_of_max_dstc1,num_of_max_dstc2; 
-		    if(min_dstc[0]>min_dstc[1])//find the farthest two points
-		    {
-                num_of_max_dstc1=i;
-                num_of_max_dstc2=num_of_point[0];
-                max_dstc=min_dstc[0];
-		    }
-		    else{
-		    	num_of_max_dstc1=i;
-                num_of_max_dstc2=num_of_point[1];
-                max_dstc=min_dstc[1];
-		    }
-		    if(max_dstc<min_dstc[2])
-		    {
-		    	num_of_max_dstc1=num_of_point[0];
-                num_of_max_dstc2=num_of_point[1];
-		    }
-
-		    temp_dstc=x_marker_pos[num_of_max_dstc1]+x_marker_pos[num_of_max_dstc2];//calculate the centre point
-		    x_init_pos.push_back(temp_dstc/2);
-		    temp_dstc=y_marker_pos[num_of_max_dstc1]+y_marker_pos[num_of_max_dstc2];
-		    y_init_pos.push_back(temp_dstc/2);
-
-		    for(int j=1;j<x_marker_pos.size();++j)//find and kick out the forth point, if cant find, it doesnt matter
-		    {
-		    	if(all_union[j])continue;
-		    	float cross_product,len_1,len_2;
-		    	len_1=sqrt((x_marker_pos[num_of_max_dstc1]-x_marker_pos[j])*(x_marker_pos[num_of_max_dstc1]-x_marker_pos[j])+(y_marker_pos[num_of_max_dstc1]-y_marker_pos[j])*(y_marker_pos[num_of_max_dstc1]-y_marker_pos[j]));
-		    	len_2=sqrt((x_marker_pos[num_of_max_dstc2]-x_marker_pos[j])*(x_marker_pos[num_of_max_dstc2]-x_marker_pos[j])+(y_marker_pos[num_of_max_dstc2]-y_marker_pos[j])*(y_marker_pos[num_of_max_dstc2]-y_marker_pos[j]));
-		    	cross_product=(x_marker_pos[num_of_max_dstc2]-x_marker_pos[j])*(x_marker_pos[num_of_max_dstc1]-x_marker_pos[j])+(y_marker_pos[num_of_max_dstc2]-y_marker_pos[j])*(y_marker_pos[num_of_max_dstc1]-y_marker_pos[j]);
-		    	float cos_degree=cross_product/len_1/len_2;
-		    	if(cos_degree<0.08 && cos_degree>-0.08)
-		    	{
-		    		all_union[j]=1;
-		    		break;
-		    	}
-		    }
-		}
-	}
-
 };
 
 int main(int argc, char **argv)
