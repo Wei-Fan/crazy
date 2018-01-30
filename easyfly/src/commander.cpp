@@ -28,7 +28,7 @@
 #include <opencv2/imgproc.hpp>
 
 
-int g_vehicle_num=1;
+int g_vehicle_num=2;
 int g_joy_num=1;
 const int DimOfVarSpace = 2;
 const float max_thrust = 0.5827*1.3;
@@ -884,14 +884,14 @@ public:
 	    			float ctheta = (tmp_vec_1(0)*tmp_vec_2(0)+tmp_vec_1(1)*tmp_vec_2(1)+tmp_vec_1(2)*tmp_vec_2(2))/(tmp_len_1*tmp_len_2);
 	    			if (ctheta < 0.75 && ctheta > 0.65)
 	    			{
-	    				if (tmp_len_2/tmp_len_1 < 1.45 && tmp_len_2/tmp_len_1 > 1.35)
+	    				if (tmp_len_2/tmp_len_1 < 1.5 && tmp_len_2/tmp_len_1 > 1.3)
 	    				{
 	    					Vector3f tmp;
 			    			tmp(0) = 0.5*(close_points[2](0) + close_points[0](0));
 			    			tmp(1) = 0.5*(close_points[2](1) + close_points[0](1));
 			    			tmp(2) = 0.5*(close_points[2](2) + close_points[0](2));	
 			    			m_swarm_pos[i] = tmp;
-	    				} else if (tmp_len_1/tmp_len_2 < 1.45 && tmp_len_1/tmp_len_2 > 1.35)
+	    				} else if (tmp_len_1/tmp_len_2 < 1.5 && tmp_len_1/tmp_len_2 > 1.3)
 	    				{
 	    					Vector3f tmp;
 			    			tmp(0) = 0.5*(close_points[1](0) + close_points[0](0));
@@ -1217,8 +1217,8 @@ Concensus contol of UAVs
 		else 
 		{		
 			//bool isReadyToCircle = false;
-			float circle_err = 0.05f;
-			float outWards_step = 0.05f;
+			float circle_err = 0.02f;
+			float outWards_step = 0.005f;
 			int count_ready_to_circle = 0;
 			float timeForOneCircle = 8.0f;
 			for (int i=0;i<g_vehicle_num;i++)
@@ -1256,7 +1256,7 @@ Concensus contol of UAVs
 					m_ctrl_v[i].posctrl_msg.pos_sp.y = (m_radius_Pos[i])*sin(m_thetaPos[i]);
 					m_ctrl_v[i].posctrl_msg.pos_sp.z = takeoff_objective_height - m_takeoff_switch_Hover;
 					printf("%f\n",m_thetaPos[i]);
-					if(m_thetaPos[i] >= 5000*3.14)
+					if(m_thetaPos[i] >= 5*3.14)
 					{
 						++count_circling;
 					}
@@ -1264,6 +1264,7 @@ Concensus contol of UAVs
 				if(count_circling == g_vehicle_num)
 				{
 					m_flight_state = Hovering;
+					isHovering = true;
 				}
 			}
 			else

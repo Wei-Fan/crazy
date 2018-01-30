@@ -12,7 +12,7 @@ float dead_zone_f(float a, float b);
 #define DEG2RAD 0.01745
 #define RAD2DEG 57.3
 #define MAX_VELOCITY 2
-#define CIRCLING_R 0.8
+#define CIRCLING_R 0.5
 
 #define MODE_RAW 0
 #define MODE_POS 1
