@@ -1,0 +1,75 @@
+<?xml version="1.0"?>
+
+<launch>
+  <!-- 0-raw, 1-pos, 2-trj -->
+  <param name="flight_mode" value="1" type="int" />
+  <param name="joy_num" value="1" type="int" />
+  <arg name="joy_dev0" default="/dev/input/js0" />
+  <arg name="g_vehicle_num" default="2" />
+  
+  <arg name="tf_prefix" default="" />
+  <arg name="roll_trim" default="0" />
+  <arg name="pitch_trim" default="0" />
+  <arg name="enable_logging" default="True" />
+  <arg name="enable_logging_imu" default="True" />
+  <arg name="use_ros_time" default="True" />
+  <arg name="enable_logging_att" default="True" />
+  <param name="enable_logging" value="$(arg enable_logging)" />
+  <param name="enable_logging_imu" value="$(arg enable_logging_imu)" />
+  <param name="use_ros_time" value="$(arg use_ros_time)" />
+  <param name="enable_logging_att" value="$(arg enable_logging_att)" />
+
+
+  <node pkg="easyfly" type="swarm_Server" name="swarm_Server" output="screen"/>
+
+  <group ns="joygroup0">
+    <node pkg="joy" name="joy_node0" type="joy_node" >
+      <param name="dev" value="$(arg joy_dev0)" />
+    </node>
+  </group>
+
+  <node pkg="vicon_bridge" type="vicon_bridge" name="vicon" >
+    <param name="stream_mode" value="ClientPull" type="str" />
+    <param name="datastream_hostport" value="192.168.2.100:801" type="str" />
+    <!--param name="datastream_hostport" value="vicon:801" type="str" /-->
+    <param name="tf_ref_frame_id" value="/world" type="str" />
+  </node>
+
+  <group ns="vehicle0">
+      <arg name="uri" default="radio://0/80/250K/0xE7E7E7E7E7"/>
+      <!--rosparam command="load" file="$(find easyfly)/config/pid_param.yaml"/-->
+      <node pkg="easyfly" type="swarm_addCf" name="swarm_addCf0" output="screen">
+          <param name="group_index" value="1"/><!-- 1 -->
+          <param name="g_vehicle_num" value="$(arg g_vehicle_num)" type="int" />
+          <param name="uri" value="$(arg uri)" type="string"/>
+          <param name="tf_prefix" value="$(arg tf_prefix)" />
+          <param name="roll_trim" value="$(arg roll_trim)" />
+          <param name="pitch_trim" value="$(arg pitch_trim)" />
+      </node>
+      <node pkg="easyfly" type="swarm_controller" name="swarm_controller0" output="screen" >
+        <param name="group_index" value="0"/>
+      </node>
+  </group>
+
+
+  <group ns="vehicle1">
+      <arg name="uri" default="radio://0/0/250K/0xE8E8E8E8E8"/>
+      <node pkg="easyfly" type="swarm_addCf" name="swarm_addCf1" output="screen">
+        <param name="uri" value="$(arg uri)" type="string" />
+        <param name="group_index" value="0"/>
+        <param name="g_vehicle_num" value="$(arg g_vehicle_num)" type="int" />
+        <param name="tf_prefix" value="$(arg tf_prefix)" />
+        <param name="roll_trim" value="$(arg roll_trim)" />
+        <param name="pitch_trim" value="$(arg pitch_trim)" />
+      </node>
+      <node pkg="easyfly" type="swarm_controller" name="swarm_controller1" output="screen" >
+        <param name="group_index" value="1"/>
+      </node>
+  </group>
+
+<node pkg="easyfly" name="commander" type="commander" output="screen"/>
+<!--node pkg="easyfly" type="swarm_linker" name="swarm_linker" output="screen" /-->
+
+
+</launch>
+

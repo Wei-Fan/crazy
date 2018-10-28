@@ -87,6 +87,7 @@ include_directories(
 #add_library(gl_declair SHARED include/gl_declair.cpp)
 add_library(IIR SHARED include/IIR.cpp)
 add_library(type_methode SHARED include/type_methode.cpp)
+#add_library(Controller_Decentrolized SHARED src/swarm_controller_Decentralized.cpp)
 
 add_executable(commander
   src/commander.cpp
@@ -144,6 +145,22 @@ add_executable(joysticks2
 target_link_libraries(joysticks2
   ${catkin_LIBRARIES}
   ${Boost_LIBRARIES}
+)
+
+add_executable(swarm_Server_Decentralized
+  src/swarm_Server_Decentralized.cpp
+)
+
+#add_dependencies(swarm_addCf
+#  crazyflie_driver_generate_messages_cpp
+#)
+
+target_link_libraries(swarm_Server_Decentralized
+  ${catkin_LIBRARIES}
+  ${Boost_LIBRARIES}
+  type_methode
+  #Controller_Decentrolized
+  IIR
 )
 
 #add_executable(xbee_linker

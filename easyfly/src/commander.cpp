@@ -648,6 +648,7 @@ public:
 	
 	void vicon_markerCallback(const vicon_bridge::Markers::ConstPtr& msg)
 	{	
+		
 		m_markers = msg->markers;
 		
 		if(isFirstVicon && msg->markers.size() != 0)
@@ -815,7 +816,7 @@ public:
 				    				float len_q;
 				    				vec3f_norm(&consider_vec[q], &len_q);
 				    				float ctheta = (consider_vec[p](0)*consider_vec[q](0)+consider_vec[p](1)*consider_vec[q](1)+consider_vec[p](2)*consider_vec[q](2))/(len_p*len_q);
-			    					if (ctheta < 0.2 && len_q/len_p < 1.05 && len_q/len_p > 1.05)
+			    					if (ctheta < 0.2 && len_q/len_p < 1.05 && len_q/len_p > 0.95)
 			    					{
 			    						//printf("condition 1\n");
 			    						Vector3f tmp_pos;

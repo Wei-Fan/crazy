@@ -21,7 +21,7 @@
 
 
   <!--node pkg="easyfly" type="swarm_Server" name="swarm_Server" output="screen"/-->
-  <node pkg="easyfly" type="swarm_Server_pseudoDecentralized" name="swarm_Server" output="screen"/>
+  <node pkg="easyfly" type="swarm_Server_Decentralized" name="swarm_Server_Decentralized" output="screen"/>
 
   <group ns="joygroup0">
     <node pkg="joy" name="joy_node0" type="joy_node" >
@@ -116,8 +116,8 @@
       </node>
   </group-->
 
-  <group ns="vehicle5">
-      <arg name="uri" default="radio://0/100/1M/0xE7E7E7E7E7"/>
+  <group ns="vehicle11">
+      <arg name="uri" default="radio://0/100/1M/0xE8E8E8E8E8"/>
       
       <node pkg="easyfly" type="swarm_addCf" name="swarm_addCf0" output="screen">
           <param name="group_index" value="0"/>
